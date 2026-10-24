@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- orbit ring -->
+    <path
+        android:pathData="M30,54 a24,24 0 1,0 48,0 a24,24 0 1,0 -48,0"
+        android:strokeColor="#8FA2FF"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="2.4" />
+    <!-- tether line -->
+    <path
+        android:pathData="M54,54 L73.7,40.2"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round" />
+    <!-- anchor -->
+    <path
+        android:fillColor="#8FA2FF"
+        android:pathData="M49,54 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <!-- orbiting dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66.7,40.2 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+</vector>
