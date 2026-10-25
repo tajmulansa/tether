@@ -1836,10 +1836,13 @@ requestAnimationFrame(frame);
 (function(){
   const t0=window.__t0||0;let n=0;
   function done(){const b=document.getElementById('boot');if(!b)return;b.classList.add('out');setTimeout(function(){b.remove();},520);}
+  /* in the app, the loading screen also waits for the ad system's first loading round (its set-up is what
+     used to stutter the home screen), but never longer than 4.5 s */
+  const adsBoot=Ads.has()?new Promise(function(r){window.tetherAdsBoot=function(){setTimeout(r,350);};setTimeout(r,4500);}):Promise.resolve();
   function ready(){
     const wait=Math.max(0,1100-(performance.now()-t0));
     const f=(document.fonts&&document.fonts.ready)?Promise.race([document.fonts.ready,new Promise(function(r){setTimeout(r,1800)})]):Promise.resolve();
-    f.then(function(){setTimeout(done,wait);});
+    Promise.all([f,adsBoot]).then(function(){setTimeout(done,wait);});
   }
   (function w(){if(++n<4){requestAnimationFrame(w);return;}ready();})();
   /* get the heavy one-time work out of the way while the loader is showing */

@@ -46,6 +46,9 @@ class AdBridge(
     private var interstitialFailures = 0
     private var rewardedFailures = 0
     private var showing = false
+    private var firstInterstitial = false
+    private var firstRewarded = false
+    private var bootSent = false
     @Volatile private var playing = false   // a run is in progress: do not load ads now
 
     /** Ad status goes to the log only (adb logcat -s TetherAds); nothing is shown on screen. */
@@ -102,6 +105,7 @@ class AdBridge(
                 override fun onAdLoaded(ad: InterstitialAd) {
                     loadingInterstitial = false
                     interstitialFailures = 0
+                    firstInterstitial = true; bootCheck()
                     interstitialLoadedAt = System.currentTimeMillis()
                     interstitial = ad
                     note("interstitial ad loaded")
@@ -111,6 +115,7 @@ class AdBridge(
                     loadingInterstitial = false
                     interstitial = null
                     interstitialFailures++
+                    firstInterstitial = true; bootCheck()
                     note("interstitial failed: code ${error.code} ${error.message}")
                     main.postDelayed({ loadInterstitial() }, backoff(interstitialFailures))
                 }
@@ -127,6 +132,7 @@ class AdBridge(
                 override fun onAdLoaded(ad: RewardedAd) {
                     loadingRewarded = false
                     rewardedFailures = 0
+                    firstRewarded = true; bootCheck()
                     rewardedLoadedAt = System.currentTimeMillis()
                     rewarded = ad
                     note("rewarded ad loaded")
@@ -137,12 +143,20 @@ class AdBridge(
                     loadingRewarded = false
                     rewarded = null
                     rewardedFailures++
+                    firstRewarded = true; bootCheck()
                     note("rewarded failed: code ${error.code} ${error.message}")
                     notifyGame("rewarded", "loadfailed")
                     main.postDelayed({ loadRewarded() }, backoff(rewardedFailures))
                 }
             },
         )
+    }
+
+    /** Tells the loading screen that the first ad loading round is over (loaded or failed). */
+    private fun bootCheck() {
+        if (bootSent || !firstInterstitial || !firstRewarded) return
+        bootSent = true
+        main.post { web.evaluateJavascript("window.tetherAdsBoot&&window.tetherAdsBoot()", null) }
     }
 
     /** 15 s, 30 s, 60 s ... capped at 5 minutes. */

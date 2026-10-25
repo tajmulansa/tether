@@ -74,8 +74,9 @@ class MainActivity : ComponentActivity() {
 
                 override fun onPageFinished(view: WebView, url: String?) {
                     pageReady = true
-                    // Start ads a moment after the game is up, so setting them up cannot stutter the start.
-                    view.postDelayed({ ads.start() }, 2500)
+                    // Set the ads up right away: the game's loading screen is still showing and
+                    // waits for the first round, so any stutter happens there, not on the home screen.
+                    ads.start()
                 }
 
                 // Never navigate away from the game.
