@@ -369,12 +369,14 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
-const cv=$('c'),ctx=cv.getContext('2d');
+const cv=$('c'),ctx=cv.getContext('2d',{alpha:false});
 const FW=400,FONT='"Plus Jakarta Sans",-apple-system,system-ui,"Segoe UI",Roboto,sans-serif';
 let S=1,H=640,offX=0;
 let renderScale=1;   /* lowered automatically on slow phones (see governor) */
 function resize(){
-  const d=Math.max(.75,Math.min(window.devicePixelRatio||1,2)*renderScale);
+  let d=Math.max(.7,Math.min(window.devicePixelRatio||1,2)*renderScale);
+  /* never push more than ~1.1 million pixels per frame, whatever the screen is */
+  d=Math.min(d,Math.sqrt(1100000/Math.max(1,innerWidth*innerHeight)));
   cv.width=Math.floor(innerWidth*d);cv.height=Math.floor(innerHeight*d);
   S=Math.min(cv.width/FW,cv.height/600);
   H=cv.height/S;
@@ -1464,10 +1466,16 @@ function drawAnchor(a){
   ctx.save();ctx.translate(a.x,a.y);ctx.rotate(time*.4);ctx.globalAlpha=.15+.1*pulse+(lat?.2:0);
   ctx.drawImage(getSprite(2,qc),-56,-56,112,112);ctx.restore();
   ctx.drawImage(getSprite(1,qc),a.x-12,a.y-12,24,24);
-  if(a.van&&a.vt>0){
-    const f=1-Math.min(1,a.vt/1.7);
-    ctx.strokeStyle='#fff';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();
-    ctx.arc(a.x,a.y,14,-Math.PI/2,-Math.PI/2+f*Math.PI*2);ctx.stroke();
+  if(a.van){
+    /* orange anchors crumble: dashed ring always, urgent flashing once you hold one */
+    ctx.save();ctx.strokeStyle='hsl(30,100%,62%)';ctx.lineWidth=1.6;ctx.globalAlpha=.55;ctx.setLineDash([3,5]);
+    ctx.beginPath();ctx.arc(a.x,a.y,19,time*.8,time*.8+6.283);ctx.stroke();ctx.restore();
+    if(a.vt>0){
+      const f=1-Math.min(1,a.vt/1.7);
+      ctx.strokeStyle=f<.4?'#ff5a4a':'#fff';ctx.lineWidth=2.8;ctx.lineCap='round';ctx.beginPath();
+      ctx.arc(a.x,a.y,14,-Math.PI/2,-Math.PI/2+f*Math.PI*2);ctx.stroke();
+      if(f<.45){ctx.globalAlpha=.35+.35*Math.sin(time*40);ctx.fillStyle='#ff5a4a';ctx.beginPath();ctx.arc(a.x,a.y,12,0,6.283);ctx.fill();ctx.globalAlpha=1;}
+    }
   }
 }
 function drawItems(vTop,vBot){
@@ -1583,14 +1591,27 @@ function draw(){
 /* ---------- loop ---------- */
 let last=performance.now();
 /* If the phone cannot keep up, draw at a lower resolution until it can (the picture stays sharp enough, the game stays smooth). */
-let gAvg=16.7,gLast=0,bodyState='';
+let gAvg=16.7,gLast=0,gGood=0,gUps=0,bodyState='';
+/* Adaptive quality: drops resolution fast when frames get slow (e.g. the phone's GPU path
+   degrades after a notification or an ad), and gives some back when it runs smoothly again. */
 function governor(now,raw){
-  if(state!=='play'||document.hidden||raw>120)return;
-  gAvg+=(raw-gAvg)*.06;
-  if(gAvg>25&&now-gLast>2500&&renderScale>.66){
-    renderScale=Math.max(.65,renderScale*.82);gLast=now;gAvg=16.7;resize();
-  }
+  if(state!=='play'||document.hidden||raw>250)return;
+  gAvg+=(raw-gAvg)*.08;
+  const since=now-gLast;
+  if(gAvg>24&&since>1500&&renderScale>.52){
+    renderScale=Math.max(.5,renderScale*(gAvg>40?.68:.85));gLast=now;gAvg=16.7;gGood=0;resize();
+  }else if(gAvg<18.5&&renderScale<1&&gUps<3){
+    gGood+=raw;
+    if(gGood>12000&&since>12000){renderScale=Math.min(1,renderScale*1.2);gLast=now;gGood=0;gUps++;resize();}
+  }else gGood=0;
 }
+/* coming back from a notification shade, another app or an ad: reset timing and re-create the canvas buffer */
+function wake(){
+  last=performance.now();gAvg=16.7;gGood=0;gLast=performance.now();
+  renderScale=1;gUps=0;resize();
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)wake();});
+addEventListener('focus',function(){wake();});
 function frame(now){
   const raw=now-last;let real=raw/1000;last=now;
   if(real>.033)real=.033;
