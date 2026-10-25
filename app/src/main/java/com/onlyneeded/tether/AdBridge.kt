@@ -46,6 +46,7 @@ class AdBridge(
     private var interstitialFailures = 0
     private var rewardedFailures = 0
     private var showing = false
+    @Volatile private var playing = false   // a run is in progress: do not load ads now
 
     /** Ad status goes to the log only (adb logcat -s TetherAds); nothing is shown on screen. */
     private fun note(msg: String) {
@@ -93,7 +94,7 @@ class AdBridge(
     // ---------------------------------------------------------------- loading
 
     private fun loadInterstitial() {
-        if (!sdkInitialised || loadingInterstitial || interstitial != null) return
+        if (!sdkInitialised || playing || loadingInterstitial || interstitial != null) return
         loadingInterstitial = true
         InterstitialAd.load(
             activity, BuildConfig.ADMOB_INTERSTITIAL_ID, AdRequest.Builder().build(),
@@ -118,7 +119,7 @@ class AdBridge(
     }
 
     private fun loadRewarded() {
-        if (!sdkInitialised || loadingRewarded || rewarded != null) return
+        if (!sdkInitialised || playing || loadingRewarded || rewarded != null) return
         loadingRewarded = true
         RewardedAd.load(
             activity, BuildConfig.ADMOB_REWARDED_ID, AdRequest.Builder().build(),
@@ -129,6 +130,7 @@ class AdBridge(
                     rewardedLoadedAt = System.currentTimeMillis()
                     rewarded = ad
                     note("rewarded ad loaded")
+                    notifyGame("rewarded", "ready")
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
@@ -136,6 +138,7 @@ class AdBridge(
                     rewarded = null
                     rewardedFailures++
                     note("rewarded failed: code ${error.code} ${error.message}")
+                    notifyGame("rewarded", "loadfailed")
                     main.postDelayed({ loadRewarded() }, backoff(rewardedFailures))
                 }
             },
@@ -150,6 +153,14 @@ class AdBridge(
     private fun fresh(loadedAt: Long) = System.currentTimeMillis() - loadedAt < 50 * 60 * 1000L
 
     // ---------------------------------------------------------------- called from the game (JS thread)
+
+    /** The game tells us when a run starts/ends. Ads are only requested while nobody is playing,
+     *  because loading an ad does work on the main thread and can make the game stutter. */
+    @JavascriptInterface
+    fun setPlaying(p: Boolean) {
+        playing = p
+        if (!p) main.postDelayed({ if (!playing) { loadRewarded(); loadInterstitial() } }, 400)
+    }
 
     @JavascriptInterface
     fun hasRewarded(): Boolean = !showing && rewarded != null && fresh(rewardedLoadedAt)

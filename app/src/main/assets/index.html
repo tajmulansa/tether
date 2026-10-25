@@ -1096,7 +1096,9 @@ function updChips(){
 /* ---------- ads (Android app only: the app injects window.AndroidAds; in a browser all of this stays hidden) ---------- */
 const AD_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
 const Ads={
-  busy:false,cb:null,since:0,last:Date.now(),
+  busy:false,cb:null,since:0,last:Date.now(),want:false,wantT:0,
+  /* tells the app when a run is in progress, so it never loads ads in the middle of play */
+  playing(p){try{if(this.has()&&window.AndroidAds.setPlaying)window.AndroidAds.setPlaying(!!p);}catch(e){}},
   has(){return typeof window.AndroidAds!=='undefined'&&window.AndroidAds!==null;},
   rewardedReady(){try{return this.has()&&!this.busy&&!!window.AndroidAds.hasRewarded();}catch(e){return false;}},
   showRewarded(done){
@@ -1116,7 +1118,12 @@ const Ads={
     if(cb)cb(kind==='rewarded'?status==='reward':true);
   }
 };
-window.tetherAdEvent=function(kind,status){Ads.finish(kind,status);};
+function adWaitEnd(){Ads.want=false;Ads.wantT=0;$('bAdRevive').innerHTML=AD_ICON+'Watch ad to revive';}
+window.tetherAdEvent=function(kind,status){
+  if(kind==='rewarded'&&status==='ready'){if(Ads.want&&revOpen){adWaitEnd();$('bAdRevive').onclick();}return;}
+  if(kind==='rewarded'&&status==='loadfailed'){if(Ads.want){adWaitEnd();toast("Can't load ad. Check your internet and try again");sfx.error();}return;}
+  Ads.finish(kind,status);
+};
 /* leaving the game-over screen: show an interstitial first when one is due */
 function leaveOver(go){
   if(Ads.busy)return;
@@ -1142,11 +1149,12 @@ function openRev(){
 }
 function closeRev(){
   if(!revOpen)return;
-  revOpen=false;rvLeft=0;overT=0;
+  revOpen=false;rvLeft=0;overT=0;adWaitEnd();
   $('rev').classList.add('hide');$('over').classList.remove('hide');
 }
 function tickRevive(dt){
   if(!revOpen||Ads.busy)return;
+  if(Ads.want){Ads.wantT+=dt;if(Ads.wantT>6){adWaitEnd();toast("Can't load ad. Check your internet and try again");sfx.error();}return;}
   rvLeft-=dt;
   const f=Math.max(0,rvLeft/REVIVE_TIME);
   $('rvTimer').firstChild.style.transform='scaleX('+f+')';
@@ -1292,8 +1300,11 @@ $('bEnd').onclick=function(){closeRev();};
 $('bHome').onclick=function(){leaveOver(showHome);};
 $('bAdRevive').onclick=function(){
   if(!Ads.rewardedReady()){
+    if(Ads.want||Ads.busy)return;
+    /* not loaded yet: ask the app to load it now and show it the moment it is ready */
+    Ads.want=true;Ads.wantT=0;$('bAdRevive').innerHTML=AD_ICON+'Loading ad…';
     try{window.AndroidAds.retryRewarded&&window.AndroidAds.retryRewarded();}catch(e){}
-    toast("Can't load ad. Check your internet and try again");sfx.error();vib(30);return;
+    return;
   }
   Ads.showRewarded(function(ok){if(ok){run.adUsed=true;revive(true);}else toast("Can't load ad. Try again");});
 };
@@ -1648,7 +1659,7 @@ function frame(now){
     update(real*ts,real);
   }
   governor(now,raw);
-  if(state!==bodyState){bodyState=state;document.body.classList.toggle('playing',state==='play');}
+  if(state!==bodyState){const wasP=bodyState==='play';bodyState=state;document.body.classList.toggle('playing',state==='play');if(wasP!==(state==='play'))Ads.playing(state==='play');}
   /* nothing moves while paused or while a sheet covers the screen, so skip redrawing */
   if(state!=='pause'&&sheetKind===null)draw();
   requestAnimationFrame(frame);
