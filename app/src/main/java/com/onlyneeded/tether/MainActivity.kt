@@ -31,6 +31,9 @@ class MainActivity : ComponentActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Ask for a steady 60 Hz: the game is drawn at 60 fps, and a fixed rate avoids the
+        // refresh-rate switching that makes 120 Hz phones stutter.
+        window.attributes = window.attributes.also { it.preferredRefreshRate = 60f }
 
         val loader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))

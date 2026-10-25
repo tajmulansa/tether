@@ -1639,6 +1639,8 @@ function wake(){
 document.addEventListener('visibilitychange',function(){if(!document.hidden)wake();});
 addEventListener('focus',function(){wake();});
 function frame(now){
+  /* 120 Hz phones: render every other refresh (about 60 fps) so each frame has twice the time */
+  if(now-last<10.5){requestAnimationFrame(frame);return;}
   const raw=now-last;let real=raw/1000;last=now;
   if(real>.033)real=.033;
   if(state!=='pause'){
