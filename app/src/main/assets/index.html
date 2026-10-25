@@ -33,12 +33,11 @@ html,body{
   touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;
 }
 /* background lives in a CSS layer (composited by the GPU), so the canvas only draws the game */
-#bgl{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:linear-gradient(180deg,var(--b1,#05060f),var(--b2,#10122a))}
-#bgl i{position:absolute;border-radius:50%;will-change:transform;animation:drift 38s ease-in-out infinite alternate}
-#bgl i:nth-child(1){width:150vw;height:150vw;left:-50vw;top:-20vh;background:radial-gradient(closest-side,var(--g0,rgba(60,60,160,.2)),transparent)}
-#bgl i:nth-child(2){width:170vw;height:170vw;left:-10vw;top:25vh;background:radial-gradient(closest-side,var(--g1,rgba(90,40,150,.2)),transparent);animation-duration:51s;animation-delay:-9s}
-#bgl i:nth-child(3){width:190vw;height:190vw;left:-70vw;top:60vh;background:radial-gradient(closest-side,var(--g2,rgba(40,80,160,.2)),transparent);animation-duration:64s;animation-delay:-20s}
-@keyframes drift{from{transform:translate3d(-6vw,-4vh,0)}to{transform:translate3d(8vw,6vh,0)}}
+#bgl{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:#05060f}
+/* two stacked layers; a zone change fades the new colour in on top (opacity only, no repainting while it fades) */
+#bgl .bl{position:absolute;inset:0;opacity:0;transition:opacity 2.2s ease;
+  background:radial-gradient(circle at 22% 14%,var(--g0,rgba(60,60,160,.2)),transparent 58%),radial-gradient(circle at 78% 52%,var(--g1,rgba(90,40,150,.2)),transparent 62%),radial-gradient(circle at 28% 92%,var(--g2,rgba(40,80,160,.2)),transparent 66%),linear-gradient(180deg,var(--b1,#05060f),var(--b2,#10122a))}
+#bgl .bl.on{opacity:1}
 canvas{display:block;width:100vw;height:100vh;height:100dvh;touch-action:none}
 button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-appearance:none;padding:0;transition:transform .16s ease,background .2s ease,border-color .2s ease,opacity .2s ease}
 button:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
@@ -302,7 +301,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
 </style>
 </head>
 <body>
-<div id="bgl"><i></i><i></i><i></i></div>
+<div id="bgl"><div class="bl"></div><div class="bl"></div></div>
 <canvas id="c"></canvas>
 <div id="vig"></div>
 
@@ -797,7 +796,7 @@ function mStepAt(step,t){
 /* ---------- glow sprites, trails, orbs ---------- */
 const glowCache={};
 function glowSprite(h){
-  h=((Math.round(h/6)*6)%360+360)%360;
+  h=((Math.round(h/8)*8)%360+360)%360;
   let c=glowCache[h];
   if(!c){
     c=document.createElement('canvas');c.width=c.height=64;
@@ -907,7 +906,7 @@ function newRun(){
   anchors.push(a0);run.lastChain=a0;
   player={x:a0.x+60,y:a0.y,vx:0,vy:0,latched:a0,ang:0,dir:1,r:60,flightT:0,flyDist:0,prev:null,cool:0};
   camY=-H*0.62;
-  hue=hueT=ZONES[0].h;
+  hue=hueT=ZONES[0].h;setBG(hue,true);
   while(run.lastChain.y>camY-250)spawn();
   setAccent();hudScore(false);hudCoins();
 }
@@ -1010,8 +1009,7 @@ function latch(a,d,dx,dy){
   run.perfect=false;
 }
 function zoneChange(){
-  if(spriteCache.size>150)spriteCache.clear();   /* drop the previous zone's cached colours */
-  const z=ZONES[run.zone%ZONES.length];hueT=z.h;setAccent();hudScore(false);
+  const z=ZONES[run.zone%ZONES.length];hueT=z.h;setBG(z.h,false);prewarm(z.h);setAccent();hudScore(false);
   toast('Zone '+(run.zone+1)+' · '+z.n);
   ring(player.x,player.y,z.h,160);sfx.zone();vib([10,30,10]);
 }
@@ -1404,7 +1402,6 @@ function update(dt,real){
   for(let i=rings.length-1;i>=0;i--){const q=rings[i];q.t+=dt;q.r=6+(q.max-6)*Math.min(1,q.t/.5);if(q.t>.5)rings.splice(i,1);}
   shake*=Math.pow(.02,real);if(shake<.1)shake=0;
   flash=Math.max(0,flash-real*2);
-  setBGHue();
 }
 
 /* ---------- draw ---------- */
@@ -1435,13 +1432,19 @@ function getSprite(kind,h){
   }
   spriteCache.set(key,c);return c;
 }
+/* build the sprites for a colour ahead of time (not in the middle of a frame) */
+function prewarm(h){const q=qh(h,8);getSprite(1,q);getSprite(2,q);getSprite(3,q);}
 function anchorCol(a){return a.van?35:(a.amp?(hue+150)%360:hue);}
-const bgl=document.getElementById('bgl');let bgQ=-1;
-function setBGHue(){
-  const q=Math.round(hue);if(q===bgQ)return;bgQ=q;
-  const st=bgl.style;
-  st.setProperty('--b1','hsl('+q+',55%,5%)');st.setProperty('--b2','hsl('+((q+28)%360)+',55%,15%)');
-  for(let i=0;i<3;i++)st.setProperty('--g'+i,'hsla('+((q+40*i)%360)+',80%,45%,.2)');
+const bgl=document.getElementById('bgl');let bgQ=-1,bgOn=1,bgZ=1;
+function setBG(h,instant){
+  h=Math.round(h);if(h===bgQ&&!instant)return;bgQ=h;
+  const L=bgl.children,cur=L[bgOn],nxt=L[bgOn^1],st=nxt.style;
+  st.setProperty('--b1','hsl('+h+',55%,5%)');st.setProperty('--b2','hsl('+((h+28)%360)+',55%,15%)');
+  for(let i=0;i<3;i++)st.setProperty('--g'+i,'hsla('+((h+40*i)%360)+',80%,45%,.2)');
+  st.zIndex=++bgZ;
+  if(instant){st.transition='none';cur.classList.remove('on');nxt.classList.add('on');void nxt.offsetWidth;st.transition='';}
+  else{nxt.classList.add('on');setTimeout(function(){if(L[bgOn]===nxt)cur.classList.remove('on');},2400);}
+  bgOn^=1;
 }
 function drawBG(){
   ctx.clearRect(0,0,cv.width,cv.height);
@@ -1480,7 +1483,7 @@ function drawAnchor(a){
     ctx.closePath();ctx.fill();ctx.fillStyle='#2a0610';ctx.beginPath();ctx.arc(0,0,4,0,6.283);ctx.fill();ctx.restore();
     return;
   }
-  const col=anchorCol(a),qc=qh(col,3);
+  const col=anchorCol(a),qc=qh(col,8);
   const lat=player.latched===a,pulse=.5+.5*Math.sin(time*3+a.idx*1.7);
   if(a.amp){
     ctx.globalAlpha=.12;ctx.strokeStyle='hsl('+col+',80%,70%)';ctx.lineWidth=1.2;ctx.setLineDash([2,6]);
