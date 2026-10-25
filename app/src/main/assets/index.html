@@ -208,6 +208,8 @@ button:active{transform:scale(.96)}
 .ovtag{font-size:11.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
 .ovtag.gold{color:var(--gold)}
 
+#rdy{position:fixed;left:0;right:0;top:34%;text-align:center;font-size:110px;font-weight:200;line-height:1;pointer-events:none;color:#fff;text-shadow:0 0 40px rgba(255,255,255,.35)}
+#rdy small{display:block;margin-top:10px;font-size:11.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);text-shadow:none}
 #rvScore,#ovScore{font-size:96px;font-weight:300;line-height:.95;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
 #ovBest,.rvsub{color:var(--mut);font-size:12.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
 
@@ -348,6 +350,8 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
     <button class="link" id="bHome">Home</button>
   </div>
 </div>
+
+<div id="rdy" class="hide"><span id="rdyN">3</span><small>Get ready</small></div>
 
 <div id="rev" class="screen hide">
   <div class="ovwrap">
@@ -1172,12 +1176,12 @@ function renderHome(){
 }
 function showHome(){
   state='home';ensureDay();newRun();
-  revOpen=false;$('rev').classList.add('hide');$('home').classList.remove('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.add('hide');
+  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('home').classList.remove('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.add('hide');
   renderHome();
 }
 function startPlay(){
   ensureDay();newRun();state='play';
-  revOpen=false;$('rev').classList.add('hide');$('home').classList.add('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.remove('hide');
+  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('home').classList.add('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.remove('hide');
   lastChips='';$('chips').innerHTML='';
   $('hint').classList.toggle('hide',save.stats.runs>=3);
 }
@@ -1191,7 +1195,7 @@ function revive(free){
   if(!free)save.coins-=REVIVE;
   run.revived=true;
   if(!rescue()){if(!free)save.coins+=REVIVE;run.revived=false;return;}
-  state='play';run.invuln=1.6;flash=0;
+  state='ready';run.rdy=2.7;run.invuln=2;flash=0;$('rdyN').textContent='3';$('rdy').classList.remove('hide');
   revOpen=false;rvLeft=0;$('rev').classList.add('hide');$('over').classList.add('hide');$('hud').classList.remove('hide');
   persist();hudCoins();sfx.revive();
 }
@@ -1343,6 +1347,12 @@ function update(dt,real){
   for(const a of anchors){if(a.amp&&!a.gone)a.x=a.bx+Math.sin(time*a.f+a.ph)*a.amp;}
   const p=player;
   if(state==='over'){overT+=real;tickRevive(real);}
+  if(state==='ready'){
+    /* short "get ready" countdown after a revive, so the game can settle after an ad */
+    run.rdy-=real;const n=Math.ceil(run.rdy/.9);
+    if(n<=0){state='play';$('rdy').classList.add('hide');sfx.start();}
+    else if($('rdyN').textContent!==''+n){$('rdyN').textContent=n;sfx.tick();}
+  }
 
   if(state==='play'||state==='home'){
     if(p.latched){
@@ -1671,6 +1681,7 @@ if(!save.owned.trail.includes(save.sel.trail))save.sel.trail='neon';
 if(!save.owned.skin.includes(save.sel.skin))save.sel.skin='pearl';
 window.tetherPause=function(){if(state==='play')setPause(true);};
 window.tetherBack=function(){ if(!$('sheet').classList.contains('hide')){closeSheet();return true;}
+  if(state==='ready')return true;
   if(state==='play'){setPause(true);return true;} if(state==='pause'){setPause(false);return true;}
   if(state==='over'){if(revOpen){closeRev();return true;}showHome();return true;} return false; };
 showHome();
