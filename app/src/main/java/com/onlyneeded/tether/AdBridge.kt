@@ -156,6 +156,12 @@ class AdBridge(
     @JavascriptInterface
     fun hasRewarded(): Boolean = !showing && rewarded != null && fresh(rewardedLoadedAt)
 
+    /** The player tapped the revive-ad button but no ad was ready: try loading again right away. */
+    @JavascriptInterface
+    fun retryRewarded() {
+        main.post { if (rewarded != null && !fresh(rewardedLoadedAt)) rewarded = null; loadRewarded() }
+    }
+
     @JavascriptInterface
     fun showRewarded() {
         main.post {

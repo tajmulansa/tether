@@ -24,8 +24,8 @@ android {
         applicationId = "com.onlyneeded.tether"
         minSdk = 27
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.2.1"
+        versionCode = 5
+        versionName = "1.3"
     }
 
     if (keystorePath != null) {

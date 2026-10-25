@@ -216,7 +216,10 @@ button:active{transform:scale(.96)}
 #bRevive.no{opacity:.4}
 .adbtn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:0 14px}
 .adbtn svg{width:14px;height:14px;flex:none}
-.adbtn.hide,#bRevive.hide{display:none!important}
+.adbtn.hide,#bRevive.hide,#rvTimer.hide{display:none!important}
+#rvTimer{width:100%;height:3px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;margin:2px 0 10px}
+#rvTimer i{display:block;height:100%;width:100%;background:var(--gold);border-radius:3px;transform-origin:left center}
+#rvTimer.low i{background:#ff5a6a}
 
 /* sheet */
 .sbg{position:fixed;inset:0;background:rgba(2,3,8,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:opacity .25s,visibility .25s;z-index:6}
@@ -334,9 +337,9 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
     </div>
     <div id="ovEarn"></div>
     <button class="btn" id="bRetry">Play again</button>
+    <div id="rvTimer" class="hide"><i></i></div>
     <button class="btn ghost adbtn hide" id="bAdRevive"></button>
     <button class="btn ghost" id="bRevive">Revive</button>
-    <button class="btn ghost adbtn hide" id="bAdDouble"></button>
     <button class="link" id="bHome">Home</button>
   </div>
 </div>
@@ -1109,11 +1112,23 @@ function fillOver(isNew){
   const rv=$('bRevive');
   if(run.revived||run.score<5){rv.classList.add('hide');}
   else{rv.classList.remove('hide');rv.innerHTML='<i class="shard"></i>&nbsp; Revive for '+REVIVE;rv.classList.toggle('no',save.coins<REVIVE);}
-  const canAd=Ads.rewardedReady(),earned=run.shards+run.bonusPaid;
+  /* the ad button is always there in the app; if no ad is loaded yet, tapping it says so */
+  const canRev=!run.revived&&run.score>=5;
   $('bAdRevive').innerHTML=AD_ICON+'Watch ad to revive';
-  $('bAdRevive').classList.toggle('hide',!(canAd&&!run.revived&&run.score>=5));
-  $('bAdDouble').innerHTML=AD_ICON+'Watch ad: +'+earned+' shards';
-  $('bAdDouble').classList.toggle('hide',!(canAd&&!run.doubled&&earned>=10));
+  $('bAdRevive').classList.toggle('hide',!(Ads.has()&&canRev));
+  rvLeft=canRev?REVIVE_TIME:0;
+  $('rvTimer').classList.toggle('hide',!canRev);$('rvTimer').classList.remove('low');
+  $('rvTimer').firstChild.style.transform='scaleX(1)';
+}
+/* revive offer expires after a few seconds, like a "continue?" countdown */
+const REVIVE_TIME=7;let rvLeft=0;
+function tickRevive(dt){
+  if(state!=='over'||rvLeft<=0||Ads.busy)return;
+  rvLeft-=dt;
+  const f=Math.max(0,rvLeft/REVIVE_TIME);
+  $('rvTimer').firstChild.style.transform='scaleX('+f+')';
+  $('rvTimer').classList.toggle('low',rvLeft<2.2);
+  if(rvLeft<=0){rvLeft=0;['bRevive','bAdRevive','rvTimer'].forEach(function(id){$(id).classList.add('hide');});}
 }
 function renderHome(){
   ensureDay();
@@ -1252,16 +1267,11 @@ $('bRetry').onclick=function(){if(overT>.25)leaveOver(function(){sfx.start();sta
 $('bRevive').onclick=function(){revive();};
 $('bHome').onclick=function(){leaveOver(showHome);};
 $('bAdRevive').onclick=function(){
-  Ads.showRewarded(function(ok){if(ok){run.adUsed=true;revive(true);}else toast('No ad available right now');});
-};
-$('bAdDouble').onclick=function(){
-  Ads.showRewarded(function(ok){
-    if(!ok){toast('No ad available right now');return;}
-    run.adUsed=true;run.doubled=true;
-    const n=run.shards+run.bonusPaid;save.coins+=n;persist();hudCoins();
-    $('ovEarn').innerHTML='<i class="shard"></i>+'+(n*2)+' shards earned';
-    $('bAdDouble').classList.add('hide');sfx.claim();
-  });
+  if(!Ads.rewardedReady()){
+    try{window.AndroidAds.retryRewarded&&window.AndroidAds.retryRewarded();}catch(e){}
+    toast("Can't load ad. Check your internet and try again");sfx.error();vib(30);return;
+  }
+  Ads.showRewarded(function(ok){if(ok){run.adUsed=true;revive(true);}else toast("Can't load ad. Try again");});
 };
 $('bPause').onclick=function(){setPause(true);};
 $('bResume').onclick=function(){setPause(false);};
@@ -1297,7 +1307,7 @@ function update(dt,real){
   hue+=((hueT-hue+540)%360-180)*Math.min(1,dt*1.5);
   for(const a of anchors){if(a.amp&&!a.gone)a.x=a.bx+Math.sin(time*a.f+a.ph)*a.amp;}
   const p=player;
-  if(state==='over')overT+=real;
+  if(state==='over'){overT+=real;tickRevive(real);}
 
   if(state==='play'||state==='home'){
     if(p.latched){
