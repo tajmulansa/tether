@@ -26,11 +26,19 @@
   --font:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box}
+html{background:var(--ink)}
 html,body{
-  margin:0;height:100%;background:var(--ink);overflow:hidden;color:var(--tx);
+  margin:0;height:100%;overflow:hidden;color:var(--tx);
   font-family:var(--font);-webkit-font-smoothing:antialiased;
   touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;
 }
+/* background lives in a CSS layer (composited by the GPU), so the canvas only draws the game */
+#bgl{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:linear-gradient(180deg,var(--b1,#05060f),var(--b2,#10122a))}
+#bgl i{position:absolute;border-radius:50%;will-change:transform;animation:drift 38s ease-in-out infinite alternate}
+#bgl i:nth-child(1){width:150vw;height:150vw;left:-50vw;top:-20vh;background:radial-gradient(closest-side,var(--g0,rgba(60,60,160,.2)),transparent)}
+#bgl i:nth-child(2){width:170vw;height:170vw;left:-10vw;top:25vh;background:radial-gradient(closest-side,var(--g1,rgba(90,40,150,.2)),transparent);animation-duration:51s;animation-delay:-9s}
+#bgl i:nth-child(3){width:190vw;height:190vw;left:-70vw;top:60vh;background:radial-gradient(closest-side,var(--g2,rgba(40,80,160,.2)),transparent);animation-duration:64s;animation-delay:-20s}
+@keyframes drift{from{transform:translate3d(-6vw,-4vh,0)}to{transform:translate3d(8vw,6vh,0)}}
 canvas{display:block;width:100vw;height:100vh;height:100dvh;touch-action:none}
 button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-appearance:none;padding:0;transition:transform .16s ease,background .2s ease,border-color .2s ease,opacity .2s ease}
 button:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
@@ -294,6 +302,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
 </style>
 </head>
 <body>
+<div id="bgl"><i></i><i></i><i></i></div>
 <canvas id="c"></canvas>
 <div id="vig"></div>
 
@@ -369,7 +378,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
-const cv=$('c'),ctx=cv.getContext('2d',{alpha:false});
+const cv=$('c'),ctx=cv.getContext('2d');
 const FW=400,FONT='"Plus Jakarta Sans",-apple-system,system-ui,"Segoe UI",Roboto,sans-serif';
 let S=1,H=640,offX=0;
 let renderScale=1;   /* lowered automatically on slow phones (see governor) */
@@ -1380,6 +1389,7 @@ function update(dt,real){
   for(let i=rings.length-1;i>=0;i--){const q=rings[i];q.t+=dt;q.r=6+(q.max-6)*Math.min(1,q.t/.5);if(q.t>.5)rings.splice(i,1);}
   shake*=Math.pow(.02,real);if(shake<.1)shake=0;
   flash=Math.max(0,flash-real*2);
+  setBGHue();
 }
 
 /* ---------- draw ---------- */
@@ -1411,17 +1421,15 @@ function getSprite(kind,h){
   spriteCache.set(key,c);return c;
 }
 function anchorCol(a){return a.van?35:(a.amp?(hue+150)%360:hue);}
+const bgl=document.getElementById('bgl');let bgQ=-1;
+function setBGHue(){
+  const q=Math.round(hue);if(q===bgQ)return;bgQ=q;
+  const st=bgl.style;
+  st.setProperty('--b1','hsl('+q+',55%,5%)');st.setProperty('--b2','hsl('+((q+28)%360)+',55%,15%)');
+  for(let i=0;i<3;i++)st.setProperty('--g'+i,'hsla('+((q+40*i)%360)+',80%,45%,.2)');
+}
 function drawBG(){
-  ctx.drawImage(getSprite(4,qh(hue,1)),0,0,cv.width,cv.height);
-  ctx.globalCompositeOperation='lighter';
-  const span=cv.height*1.4,nb=renderScale<.85?2:3;
-  for(let i=0;i<nb;i++){
-    const cx=cv.width*(.2+.3*i)+Math.sin(time*.1+i)*30*S;
-    const cy=(((i*.37*cv.height-camY*S*.06*(i+1))%span)+span)%span-cv.height*.2;
-    const r=cv.width*(.7+.15*i);
-    ctx.drawImage(getSprite(3,qh(hue+40*i,4)),cx-r,cy-r,r*2,r*2);
-  }
-  ctx.globalCompositeOperation='source-over';
+  ctx.clearRect(0,0,cv.width,cv.height);
   const star=getSprite(5,0);
   for(let i=0;i<stars.length;i++){
     const s=stars[i];
