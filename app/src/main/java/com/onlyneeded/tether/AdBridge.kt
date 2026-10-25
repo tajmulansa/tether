@@ -1,7 +1,6 @@
 package com.onlyneeded.tether
 
 import android.util.Log
-import android.widget.Toast
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
@@ -48,10 +47,9 @@ class AdBridge(
     private var rewardedFailures = 0
     private var showing = false
 
-    /** Debug builds only: shows ad status on screen so problems are easy to see. */
+    /** Ad status goes to the log only (adb logcat -s TetherAds); nothing is shown on screen. */
     private fun note(msg: String) {
         Log.d("TetherAds", msg)
-        if (BuildConfig.DEBUG) main.post { Toast.makeText(activity, "Ads: $msg", Toast.LENGTH_LONG).show() }
     }
 
     // ---------------------------------------------------------------- startup + consent
