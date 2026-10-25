@@ -214,6 +214,9 @@ button:active{transform:scale(.96)}
 
 #ovEarn{display:flex;align-items:center;gap:8px;color:var(--gold);font-weight:500;font-size:13px;margin:2px 0 8px}
 #bRevive.no{opacity:.4}
+.adbtn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:0 14px}
+.adbtn svg{width:14px;height:14px;flex:none}
+.adbtn.hide,#bRevive.hide{display:none!important}
 
 /* sheet */
 .sbg{position:fixed;inset:0;background:rgba(2,3,8,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:opacity .25s,visibility .25s;z-index:6}
@@ -327,7 +330,9 @@ h3{margin:6px 2px 10px;font-size:13px;font-weight:600;letter-spacing:.08em;text-
     </div>
     <div id="ovEarn"></div>
     <button class="btn" id="bRetry">Play again</button>
+    <button class="btn ghost adbtn hide" id="bAdRevive"></button>
     <button class="btn ghost" id="bRevive">Revive</button>
+    <button class="btn ghost adbtn hide" id="bAdDouble"></button>
     <button class="link" id="bHome">Home</button>
   </div>
 </div>
@@ -1026,7 +1031,7 @@ function die(why){
   const prevBest=bestNow(),isNew=run.score>prevBest&&run.score>0;
   if(isNew){if(mode==='daily'){save.daily.best=run.score;save.daily.idx=run.maxIdx;}else{save.best=run.score;save.bestIdx=run.maxIdx;}}
   if(run.score>save.bestAll)save.bestAll=run.score;
-  if(!run.counted){run.counted=true;save.stats.runs++;mEvent('runs',1);}
+  if(!run.counted){run.counted=true;save.stats.runs++;Ads.since++;mEvent('runs',1);}
   mEvent('score',run.score);
   const bonus=Math.floor(run.score/3)-run.bonusPaid;run.bonusPaid+=bonus;save.coins+=bonus;
   checkAch();persist();
@@ -1058,6 +1063,35 @@ function updChips(){
   if(run.surgeT>0)h+='<div class="pill sg">2x Score '+Math.ceil(run.surgeT)+'s</div>';
   if(h!==lastChips){$('chips').innerHTML=h;lastChips=h;}
 }
+/* ---------- ads (Android app only: the app injects window.AndroidAds; in a browser all of this stays hidden) ---------- */
+const AD_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+const Ads={
+  busy:false,cb:null,since:0,last:Date.now(),
+  has(){return typeof window.AndroidAds!=='undefined'&&window.AndroidAds!==null;},
+  rewardedReady(){try{return this.has()&&!this.busy&&!!window.AndroidAds.hasRewarded();}catch(e){return false;}},
+  showRewarded(done){
+    if(!this.rewardedReady()){done(false);return;}
+    this.busy=true;this.cb=done;
+    try{window.AndroidAds.showRewarded();}catch(e){this.finish('rewarded','failed');}
+  },
+  /* one interstitial at most every 4 finished runs and every 90 s, never in the first 3 runs */
+  interstitialDue(){return this.has()&&!this.busy&&save.stats.runs>=3&&this.since>=4&&Date.now()-this.last>90000;},
+  showInterstitial(done){
+    this.busy=true;this.cb=done;
+    try{window.AndroidAds.showInterstitial();}catch(e){this.finish('interstitial','failed');}
+  },
+  finish(kind,status){
+    const cb=this.cb;this.cb=null;this.busy=false;
+    if(kind==='interstitial'){this.last=Date.now();this.since=0;}
+    if(cb)cb(kind==='rewarded'?status==='reward':true);
+  }
+};
+window.tetherAdEvent=function(kind,status){Ads.finish(kind,status);};
+/* leaving the game-over screen: show an interstitial first when one is due */
+function leaveOver(go){
+  if(Ads.busy)return;
+  if(!run.adUsed&&Ads.interstitialDue())Ads.showInterstitial(go);else go();
+}
 function fillOver(isNew){
   const tg=$('ovTag');tg.textContent=isNew?'New best':'Run over';tg.classList.toggle('gold',isNew);
   $('ovScore').textContent=run.score;
@@ -1067,6 +1101,11 @@ function fillOver(isNew){
   const rv=$('bRevive');
   if(run.revived||run.score<5){rv.classList.add('hide');}
   else{rv.classList.remove('hide');rv.innerHTML='<i class="shard"></i>&nbsp; Revive for '+REVIVE;rv.classList.toggle('no',save.coins<REVIVE);}
+  const canAd=Ads.rewardedReady(),earned=run.shards+run.bonusPaid;
+  $('bAdRevive').innerHTML=AD_ICON+'Watch ad to revive';
+  $('bAdRevive').classList.toggle('hide',!(canAd&&!run.revived&&run.score>=5));
+  $('bAdDouble').innerHTML=AD_ICON+'Watch ad: +'+earned+' shards';
+  $('bAdDouble').classList.toggle('hide',!(canAd&&!run.doubled&&earned>=10));
 }
 function renderHome(){
   ensureDay();
@@ -1092,11 +1131,12 @@ function setPause(on){
   if(on&&state==='play'){state='pause';sfx.pause();$('pause').classList.remove('hide');}
   else if(!on&&state==='pause'){state='play';sfx.resume();$('pause').classList.add('hide');}
 }
-function revive(){
+function revive(free){
   if(run.revived)return;
-  if(save.coins<REVIVE){toast('You need '+REVIVE+' shards to revive');sfx.error();vib(30);return;}
-  save.coins-=REVIVE;run.revived=true;
-  if(!rescue()){save.coins+=REVIVE;run.revived=false;return;}
+  if(!free&&save.coins<REVIVE){toast('You need '+REVIVE+' shards to revive');sfx.error();vib(30);return;}
+  if(!free)save.coins-=REVIVE;
+  run.revived=true;
+  if(!rescue()){if(!free)save.coins+=REVIVE;run.revived=false;return;}
   state='play';run.invuln=1.6;flash=0;
   $('over').classList.add('hide');$('hud').classList.remove('hide');
   persist();hudCoins();sfx.revive();
@@ -1200,16 +1240,28 @@ document.addEventListener('click',e=>{
   const m=e.target.closest('[data-mode]');if(m){mode=m.dataset.mode;save.mode=mode;persist();newRun();renderHome();return;}
 });
 $('bPlay').onclick=function(){initAudio();sfx.start();startPlay();};
-$('bRetry').onclick=function(){if(overT>.25){sfx.start();startPlay();}};
+$('bRetry').onclick=function(){if(overT>.25)leaveOver(function(){sfx.start();startPlay();});};
 $('bRevive').onclick=function(){revive();};
-$('bHome').onclick=function(){showHome();};
+$('bHome').onclick=function(){leaveOver(showHome);};
+$('bAdRevive').onclick=function(){
+  Ads.showRewarded(function(ok){if(ok){run.adUsed=true;revive(true);}else toast('No ad available right now');});
+};
+$('bAdDouble').onclick=function(){
+  Ads.showRewarded(function(ok){
+    if(!ok){toast('No ad available right now');return;}
+    run.adUsed=true;run.doubled=true;
+    const n=run.shards+run.bonusPaid;save.coins+=n;persist();hudCoins();
+    $('ovEarn').innerHTML='<i class="shard"></i>+'+(n*2)+' shards earned';
+    $('bAdDouble').classList.add('hide');sfx.claim();
+  });
+};
 $('bPause').onclick=function(){setPause(true);};
 $('bResume').onclick=function(){setPause(false);};
 $('bRestart').onclick=function(){startPlay();};
 $('bQuit').onclick=function(){showHome();};
 $('shClose').onclick=closeSheet;
 $('sheetBg').onclick=closeSheet;
-$('over').addEventListener('click',function(e){if(e.target===$('over')&&overT>.4)startPlay();});
+$('over').addEventListener('click',function(e){if(e.target===$('over')&&overT>.4)leaveOver(startPlay);});
 
 addEventListener('pointerdown',function(e){
   if(e.target!==cv)return;
@@ -1220,7 +1272,7 @@ addEventListener('keydown',function(e){
   if(e.code==='Space'||e.code==='Enter'){
     e.preventDefault();initAudio();
     if(state==='play'&&player.latched)release(false);
-    else if(state==='over'&&overT>.4)startPlay();
+    else if(state==='over'&&overT>.4)leaveOver(startPlay);
     else if(state==='home'&&$('sheet').classList.contains('hide'))startPlay();
   } else if(e.code==='Escape'||e.code==='KeyP'){
     if(state==='play')setPause(true);else if(state==='pause')setPause(false);

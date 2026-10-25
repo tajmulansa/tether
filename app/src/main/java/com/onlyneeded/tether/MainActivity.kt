@@ -18,11 +18,12 @@ import androidx.webkit.WebViewAssetLoader
 
 /**
  * Hosts the Tether game (app/src/main/assets/index.html) in a full-screen WebView.
- * The page is served from local assets, so the app works completely offline.
+ * The page is served from local assets, so the game itself works offline; ads need internet.
  */
 class MainActivity : ComponentActivity() {
 
     private lateinit var web: WebView
+    private lateinit var ads: AdBridge
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,8 +70,13 @@ class MainActivity : ComponentActivity() {
                 ): Boolean = true
             }
         }
+        // Ads: the game talks to AdMob only through this small bridge (window.AndroidAds).
+        ads = AdBridge(this, web)
+        web.addJavascriptInterface(ads, "AndroidAds")
+
         setContentView(web)
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html")
+        ads.start()
 
         // Back button: let the game handle it (close sheet, pause, go home); exit from the home screen.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
