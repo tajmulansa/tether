@@ -1,5 +1,7 @@
 package com.onlyneeded.tether
 
+import android.util.Log
+import android.widget.Toast
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
@@ -46,6 +48,12 @@ class AdBridge(
     private var rewardedFailures = 0
     private var showing = false
 
+    /** Debug builds only: shows ad status on screen so problems are easy to see. */
+    private fun note(msg: String) {
+        Log.d("TetherAds", msg)
+        if (BuildConfig.DEBUG) main.post { Toast.makeText(activity, "Ads: $msg", Toast.LENGTH_LONG).show() }
+    }
+
     // ---------------------------------------------------------------- startup + consent
 
     fun start() {
@@ -62,18 +70,20 @@ class AdBridge(
                     initIfAllowed(consent)
                 }
             },
-            { initIfAllowed(consent) },
+            { err -> note("consent error ${err.errorCode}: ${err.message}"); initIfAllowed(consent) },
         )
         // Returning users who already gave consent can start right away.
         initIfAllowed(consent)
     }
 
     private fun initIfAllowed(consent: ConsentInformation) {
-        if (!consent.canRequestAds() || sdkInitialised) return
+        if (!consent.canRequestAds()) { note("waiting for consent"); return }
+        if (sdkInitialised) return
         sdkInitialised = true
         // Initialise off the main thread, as Google recommends.
         Thread {
             MobileAds.initialize(activity) {
+                note("SDK ready, loading ads")
                 main.post {
                     loadInterstitial()
                     loadRewarded()
@@ -95,12 +105,14 @@ class AdBridge(
                     interstitialFailures = 0
                     interstitialLoadedAt = System.currentTimeMillis()
                     interstitial = ad
+                    note("interstitial ad loaded")
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     loadingInterstitial = false
                     interstitial = null
                     interstitialFailures++
+                    note("interstitial failed: code ${error.code} ${error.message}")
                     main.postDelayed({ loadInterstitial() }, backoff(interstitialFailures))
                 }
             },
@@ -118,12 +130,14 @@ class AdBridge(
                     rewardedFailures = 0
                     rewardedLoadedAt = System.currentTimeMillis()
                     rewarded = ad
+                    note("rewarded ad loaded")
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     loadingRewarded = false
                     rewarded = null
                     rewardedFailures++
+                    note("rewarded failed: code ${error.code} ${error.message}")
                     main.postDelayed({ loadRewarded() }, backoff(rewardedFailures))
                 }
             },
