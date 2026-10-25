@@ -24,8 +24,8 @@ android {
         applicationId = "com.onlyneeded.tether"
         minSdk = 27
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.4.4"
+        versionCode = 13
+        versionName = "1.5"
     }
 
     if (keystorePath != null) {
@@ -71,6 +71,7 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.activity:activity-ktx:1.9.3")
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("com.google.android.gms:play-services-ads:23.6.0")

@@ -11,6 +11,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -24,9 +25,14 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var web: WebView
     private lateinit var ads: AdBridge
+    @Volatile private var pageReady = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
+        // System splash (icon on dark) stays up until the page has loaded, so there is no blank screen.
+        val splash = installSplashScreen()
+        val startedAt = System.currentTimeMillis()
+        splash.setKeepOnScreenCondition { !pageReady && System.currentTimeMillis() - startedAt < 2500 }
         super.onCreate(savedInstanceState)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -66,6 +72,12 @@ class MainActivity : ComponentActivity() {
                     request: WebResourceRequest
                 ): WebResourceResponse? = loader.shouldInterceptRequest(request.url)
 
+                override fun onPageFinished(view: WebView, url: String?) {
+                    pageReady = true
+                    // Start ads a moment after the game is up, so setting them up cannot stutter the start.
+                    view.postDelayed({ ads.start() }, 2500)
+                }
+
                 // Never navigate away from the game.
                 override fun shouldOverrideUrlLoading(
                     view: WebView,
@@ -79,7 +91,6 @@ class MainActivity : ComponentActivity() {
 
         setContentView(web)
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html")
-        ads.start()
 
         // Back button: let the game handle it (close sheet, pause, go home); exit from the home screen.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
