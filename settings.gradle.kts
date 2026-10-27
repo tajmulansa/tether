@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Tether"
+rootProject.name = "Ozmora"
 include(":app")

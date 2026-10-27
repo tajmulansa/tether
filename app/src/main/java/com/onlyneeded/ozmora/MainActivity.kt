@@ -1,4 +1,4 @@
-package com.onlyneeded.tether
+package com.onlyneeded.ozmora
 
 import android.annotation.SuppressLint
 import android.graphics.Color
@@ -18,7 +18,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebViewAssetLoader
 
 /**
- * Hosts the Tether game (app/src/main/assets/index.html) in a full-screen WebView.
+ * Hosts the Ozmora game (app/src/main/assets/index.html) in a full-screen WebView.
  * The page is served from local assets, so the game itself works offline; ads need internet.
  */
 class MainActivity : ComponentActivity() {

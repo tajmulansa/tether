@@ -13,7 +13,7 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
-        android:theme="@style/Theme.Tether">
+        android:theme="@style/Theme.Ozmora">
 
         <!-- AdMob app ID: test ID in debug builds, your real ID in release (see README) -->
         <meta-data
@@ -23,7 +23,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Tether.Starting"
+            android:theme="@style/Theme.Ozmora.Starting"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|density|uiMode">

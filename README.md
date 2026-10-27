@@ -1,4 +1,4 @@
-# tether
+# Ozmora
 
 A one-thumb swing game. Tap to let go of the anchor, catch the next one, and don't fall.
 
@@ -8,7 +8,7 @@ The game is a single offline HTML file shown full-screen inside a small Android 
 
 1. Open the **Actions** tab of this repo and pick the latest **Android build** run
    (or push to `main` / press **Run workflow**).
-2. Download the **tether-debug-apk** artifact, unzip it, and install `app-debug.apk` on your phone.
+2. Download the **ozmora-debug-apk** artifact, unzip it, and install `app-debug.apk` on your phone.
 
 ## Change the game
 
@@ -27,7 +27,7 @@ Add these repository secrets (Settings, Secrets and variables, Actions):
 | `KEY_PASSWORD` | key password |
 
 With those set, each run also produces a signed release APK and an `.aab` for Play Console
-(artifact **tether-release**). Bump `versionCode` in `app/build.gradle.kts` for every upload.
+(artifact **ozmora-release**). Bump `versionCode` in `app/build.gradle.kts` for every upload.
 
 ## Ads (AdMob)
 
@@ -61,7 +61,7 @@ shows Google's consent form automatically where the law requires it (EU/UK).
 
 ## Project notes
 
-- Package ID: `com.onlyneeded.tether` (set in `app/build.gradle.kts`). It cannot change after the
+- Package ID: `com.onlyneeded.ozmora` (set in `app/build.gradle.kts`). It cannot change after the
   first Play Store upload, so change it before then if you want a different one.
 - Min Android 8.1 (API 27), target API 35, portrait only.
 - The game itself works offline. Internet is only used for ads (and to load the web font).

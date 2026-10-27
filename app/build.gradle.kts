@@ -17,15 +17,15 @@ fun envOr(name: String, fallback: String): String =
     System.getenv(name)?.takeIf { it.isNotBlank() } ?: fallback
 
 android {
-    namespace = "com.onlyneeded.tether"
+    namespace = "com.onlyneeded.ozmora"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.onlyneeded.tether"
+        applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.6.1"
+        versionCode = 16
+        versionName = "1.7"
     }
 
     if (keystorePath != null) {

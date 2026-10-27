@@ -1,4 +1,4 @@
-package com.onlyneeded.tether
+package com.onlyneeded.ozmora
 
 import android.util.Log
 import android.os.Handler
