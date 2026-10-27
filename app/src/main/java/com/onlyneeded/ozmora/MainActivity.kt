@@ -89,7 +89,6 @@ class MainActivity : ComponentActivity() {
         // Ads: the game talks to AdMob only through this small bridge (window.AndroidAds).
         ads = AdBridge(this, web)
         web.addJavascriptInterface(ads, "AndroidAds")
-        web.addJavascriptInterface(ShareBridge(this), "AndroidApp")
 
         setContentView(web)
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html")

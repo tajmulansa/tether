@@ -190,8 +190,7 @@ button:active{transform:scale(.96)}
 #hint{
   grid-column:1/4;align-self:end;justify-self:center;margin-bottom:12vh;
   font-size:13.5px;font-weight:400;letter-spacing:.03em;color:var(--mut);
-  padding:10px 20px;border-radius:20px;background:var(--surface);border:1px solid var(--line);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  padding:10px 20px;letter-spacing:.06em;
   animation:breathe 2.2s ease-in-out infinite;transition:opacity .25s;
 }
 @keyframes breathe{50%{opacity:.45}}
@@ -259,12 +258,9 @@ button:active{transform:scale(.96)}
 #ovBar.gold i{background:var(--gold);opacity:1}
 #hTgt{margin-top:3px;font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:center;transition:color .3s}
 #hTgt.gold{color:var(--gold)}
+/*MORE*/.more{padding:14px 2px 4px;color:var(--faint);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+#home .bestbox.empty{visibility:hidden}
 #hStreak{margin-top:6px;color:var(--mut);font-size:11.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;text-align:center}
-.shp{color:var(--mut);font-size:13.5px;line-height:1.5;margin:0 0 14px}
-.codein{width:100%;height:50px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--tx);
-  font:500 17px/1 inherit;font-family:inherit;letter-spacing:.14em;text-transform:uppercase;text-align:center;outline:none;
-  user-select:text;-webkit-user-select:text;margin-bottom:12px}
-.codein:focus{border-color:rgba(255,255,255,.35)}
 #over .btn.ghost{margin-top:2px}
 #ovEarn{display:flex;align-items:center;gap:8px;color:var(--gold);font-weight:500;font-size:13px;margin:2px 0 8px}
 #bRevive.no{opacity:.4}
@@ -373,7 +369,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
   <div class="bestbox"><b id="hBest">0</b><span id="hBestL">Best score</span></div>
   <div id="hStreak" class="hide"></div>
   <div class="bottom">
-    <div class="seg" id="modeSeg"><button data-mode="free">Free</button><button data-mode="daily">Daily</button><button data-mode="friend">Friend</button></div>
+    <div class="seg" id="modeSeg"><button data-mode="free">Free</button><button data-mode="daily">Daily</button></div>
     <button class="btn" id="bPlay">Play</button>
     <div class="dock">
       <button data-open="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 11H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Shop</button>
@@ -392,7 +388,6 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
     <div id="ovBar"><i></i></div>
     <div id="ovEarn"></div>
     <button class="btn" id="bRetry">Play again</button>
-    <button class="btn ghost" id="bShare">Challenge a friend</button>
     <button class="link" id="bHome">Home</button>
   </div>
 </div>
@@ -924,7 +919,7 @@ function windNow(){return Math.sin(time*.42)*95;}
 function pulseOn(h){return Math.sin(time*2.4+h.ph)>-.2;}
 function speed(){return 240+Math.min(run.score,70)*1.5;}
 function bestNow(){return mode==='daily'?save.daily.best:save.best;}
-function bestIdxNow(){return mode==='daily'?save.daily.idx:(mode==='friend'?0:save.bestIdx);}
+function bestIdxNow(){return mode==='daily'?save.daily.idx:save.bestIdx;}
 /* consecutive days played */
 function ymd(d){return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();}
 function streakNow(){
@@ -936,18 +931,7 @@ function touchStreak(){
   if(save.streak.last===t)return;
   save.streak.n=save.streak.last===ymd(y)?save.streak.n+1:1;save.streak.last=t;
 }
-/* friend challenges: every run is built from a seed, so a code (seed + score) rebuilds the exact same course */
-let runSeed=1,friend=null;
-function makeCode(){return 'OZ-'+runSeed.toString(36).toUpperCase()+'-'+run.score;}
-function parseCode(t){
-  const m=/^\s*OZ[-\s]?([0-9A-Z]{1,7})[-\s]?(\d{1,4})\s*$/i.exec(t||'');if(!m)return null;
-  const seed=parseInt(m[1],36)>>>0;return {seed:seed,target:parseInt(m[2],10)};
-}
-function shareText(t){
-  try{if(window.AndroidApp&&window.AndroidApp.share){window.AndroidApp.share(t);return;}}catch(e){}
-  if(navigator.share){navigator.share({text:t}).catch(function(){});return;}
-  try{navigator.clipboard.writeText(t).then(function(){toast('Copied to clipboard');});}catch(e){toast('Sharing is not available here');}
-}
+let runSeed=1;
 
 function ensureDay(){
   const d=dayKey();
@@ -968,11 +952,11 @@ function mEvent(id,v){
 }
 
 function newRun(){
-  runSeed=mode==='daily'?dayKey():(mode==='friend'&&friend?friend.seed:((Math.random()*4294967296)>>>0));
+  runSeed=mode==='daily'?dayKey():((Math.random()*4294967296)>>>0);
   rng=mulberry32(runSeed);
   anchors=[];items=[];wells=[];parts=[];popups=[];rings=[];trail=[];MECH='';AMB='star';stormT=3;
   run={score:0,combo:0,maxIdx:0,chainIdx:0,lastChain:null,started:false,shards:0,perfects:0,bestCombo:0,revived:false,counted:false,
-    bonusPaid:0,nb:false,pb:mode==='friend'?0:bestNow(),shield:false,surgeT:0,invuln:0,t:0,perfect:false,zone:0,streak:0,lastShard:-9};
+    bonusPaid:0,nb:false,pb:bestNow(),shield:false,surgeT:0,invuln:0,t:0,perfect:false,zone:0,streak:0,lastShard:-9};
   shake=0;slowT=0;flash=0;time=0;
   const a0={x:FW/2,bx:FW/2,y:0,idx:0,zn:0,haz:false,amp:0,ph:0,f:1,van:false,catchR:52,vt:0,gone:false};
   anchors.push(a0);run.lastChain=a0;
@@ -1083,10 +1067,10 @@ function latch(a,d,dx,dy){
     if(save.set.shake)shake=Math.max(shake,2+Math.min(run.combo,6));
     vib(8);hudScore(true);
     if(!run.nb){
-      const goal=mode==='friend'&&friend?friend.target:run.pb;
+      const goal=run.pb;
       if(goal>0&&run.score>goal){
         run.nb=true;sfx.newBest();vib([20,30,40]);
-        popups.push({x:player.x,y:player.y-70,t:0,txt:mode==='friend'?'Friend beaten':'New best',sub:'',h:46});
+        popups.push({x:player.x,y:player.y-70,t:0,txt:'New best',sub:'',h:46});
         burst(player.x,player.y,30,'#ffd36b',220);ring(player.x,player.y,46,120);
       }
     }
@@ -1158,7 +1142,7 @@ function die(why){
   burst(p.x,p.y,46,'#ff6b8a',280);ring(p.x,p.y,350,100);
   flash=.55;if(save.set.shake)shake=14;
   sfx.die();vib([30,40,60]);
-  const prevBest=bestNow(),isNew=mode!=='friend'&&run.score>prevBest&&run.score>0;
+  const prevBest=bestNow(),isNew=run.score>prevBest&&run.score>0;
   if(isNew){if(mode==='daily'){save.daily.best=run.score;save.daily.idx=run.maxIdx;}else{save.best=run.score;save.bestIdx=run.maxIdx;}}
   if(run.score>save.bestAll)save.bestAll=run.score;
   if(!run.counted){run.counted=true;touchStreak();save.stats.runs++;Ads.since++;mEvent('runs',1);}
@@ -1177,8 +1161,8 @@ let lastChips='';
 function hudScore(pop){
   const e=$('hScore');e.textContent=run.score;
   if(pop){e.classList.remove('pop');void e.offsetWidth;e.classList.add('pop');setTimeout(()=>e.classList.remove('pop'),240);}
-  const tg=$('hTgt'),goal=mode==='friend'&&friend?friend.target:run.pb;
-  if(goal>0){tg.textContent=(mode==='friend'?'Friend · ':'Best · ')+goal;tg.classList.remove('hide');tg.classList.toggle('gold',run.score>goal);}
+  const tg=$('hTgt'),goal=run.pb;
+  if(goal>0){tg.textContent='Best · '+goal;tg.classList.remove('hide');tg.classList.toggle('gold',run.score>goal);}
   else tg.classList.add('hide');
   const z=ZONES[run.zone%ZONES.length];
   $('hZone').textContent=z.n+(run.zone>=ZONES.length?' '+(Math.floor(run.zone/ZONES.length)+1):'');
@@ -1233,19 +1217,17 @@ function leaveOver(go){
   if(!run.adUsed&&Ads.interstitialDue())Ads.showInterstitial(go);else go();
 }
 function fillOver(isNew){
-  const f=mode==='friend'&&friend,sc=run.score;
-  const beat=f&&sc>friend.target;
-  const tg=$('ovTag');tg.textContent=(isNew?'New best':beat?'Friend beaten':'Run over')+(run.zone>0?' · '+ZONES[run.zone%ZONES.length].n:'');tg.classList.toggle('gold',isNew||beat);
+  const sc=run.score;
+  const tg=$('ovTag');tg.textContent=(isNew?'New best':'Run over')+(run.zone>0?' · '+ZONES[run.zone%ZONES.length].n:'');tg.classList.toggle('gold',isNew);
   $('ovScore').textContent=sc;
-  const goal=f?friend.target:(isNew?run.pb:bestNow());
+  const goal=isNew?run.pb:bestNow();
   let msg;
-  if(f)msg=beat?'Beat your friend by '+(sc-goal):sc===goal?'Tied your friend':(goal-sc)+' short of your friend\'s '+goal;
-  else if(isNew)msg=run.pb>0?'Previous best '+run.pb:'First best';
+  if(isNew)msg=run.pb>0?'Previous best '+run.pb:'First best';
   else msg=sc>=goal?'Tied your best':(goal-sc)+' from your best';
   $('ovBest').textContent=msg;
-  const bar=$('ovBar');bar.classList.toggle('gold',isNew||beat);
+  const bar=$('ovBar');bar.classList.toggle('gold',isNew);
   bar.firstChild.style.transition='none';bar.firstChild.style.width='0%';void bar.offsetWidth;bar.firstChild.style.transition='';
-  const base=f?goal:Math.max(goal,sc);
+  const base=Math.max(goal,sc);
   setTimeout(function(){bar.firstChild.style.width=(base>0?Math.min(100,sc/base*100):0)+'%';},30);
   $('ovEarn').innerHTML='<i class="shard"></i>+'+(run.shards+run.bonusPaid)+' shards earned';
 }
@@ -1276,7 +1258,7 @@ function tickRevive(dt){
 }
 function renderHome(){
   ensureDay();
-  $('hBest').textContent=bestNow();
+  $('hBest').textContent=bestNow();$('hBest').parentNode.classList.toggle('empty',bestNow()<=0);
   $('hBestL').textContent=mode==='daily'?'Daily best':'Best score';
   const sk=streakNow(),st=$('hStreak');st.textContent=sk+' day streak';st.classList.toggle('hide',sk<2);
   document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));
@@ -1287,7 +1269,6 @@ function renderHome(){
   hudCoins();
 }
 function showHome(){
-  mode=save.mode==='daily'?'daily':'free';friend=null;
   state='home';ensureDay();newRun();
   revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('home').classList.remove('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.add('hide');
   renderHome();
@@ -1328,9 +1309,6 @@ function renderSheet(){
     $('shTitle').textContent='Missions';body.innerHTML=missionsHTML();
   } else if(sheetKind==='stats'){
     $('shTitle').textContent='Progress';body.innerHTML=statsHTML();
-  } else if(sheetKind==='friend'){
-    $('shTitle').textContent='Friend challenge';
-    body.innerHTML='<p class="shp">Your friend shares a code after a run. Enter it to play the exact same course and try to beat their score.</p><input id="codeIn" class="codein" maxlength="16" placeholder="OZ-XXXX-42" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"><button class="btn" data-a="friendgo">Start challenge</button>';
   } else if(sheetKind==='settings'){
     $('shTitle').textContent='Settings';body.innerHTML=settingsHTML();
   }
@@ -1376,10 +1354,11 @@ function statsHTML(){
   const lock='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const voy='<h3>Voyage · '+discCount()+'/'+ZONES.length+'</h3>'+ZONES.map(function(z,i){
     const ok=!!save.disc[i],next=!ok&&!!save.disc[i-1];
+    if(!ok&&!next)return '';
     const ic=ok?'<div class="ic" style="background:hsl('+z.h+',85%,64%);border-color:transparent;box-shadow:0 0 14px hsla('+z.h+',90%,60%,.5)"></div>':'<div class="ic">'+(next?'?':lock)+'</div>';
     const nm=ok?z.n:(next?'Zone '+(i+1)+' · ???':'Unknown space'),sm=ok?z.t:(next?'Keep climbing to discover it':'Discover the previous zone first');
     return '<div class="ach '+(ok?'ok':'')+'">'+ic+'<div class="tx"><b>'+nm+'</b><small>'+sm+'</small></div>'+(ok||!ZREW[i]?'':'<span class="rw"><i class="shard"></i>'+ZREW[i]+'</span>')+'</div>';
-  }).join('');
+  }).join('')+(discCount()<ZONES.length-1?'<div class="more">'+(ZONES.length-discCount()-1)+' more zones beyond</div>':'');
   return voy+'<h3>Stats</h3><div class="stat-grid">'+cells.map(c=>'<div class="stat"><b>'+c[1]+'</b><span>'+c[0]+'</span></div>').join('')+'</div>';
 }
 function settingsHTML(){
@@ -1391,11 +1370,6 @@ function act(s){
   const a=s.split(':');
   switch(a[0]){
     case 'tab':shopTab=a[1];renderSheet();break;
-    case 'friendgo':{
-      const c=parseCode($('codeIn').value);
-      if(!c){toast('Enter a code like OZ-7K2F-42');sfx.error();break;}
-      mode='friend';friend=c;closeSheet();sfx.start();startPlay();break;
-    }
     case 'equip':save.sel[a[1]]=a[2];persist();renderSheet();break;
     case 'buy':{
       const list=a[1]==='trail'?TRAILS:SKINS,it=list.find(x=>x.id===a[2]);
@@ -1419,13 +1393,9 @@ document.addEventListener('click',e=>{
   if(e.target.closest('button')){initAudio();sfx.tick();}
   const t=e.target.closest('[data-a]');if(t){initAudio();act(t.dataset.a);return;}
   const o=e.target.closest('[data-open]');if(o){initAudio();openSheet(o.dataset.open);return;}
-  const m=e.target.closest('[data-mode]');if(m){if(m.dataset.mode==='friend'){openSheet('friend');return;}mode=m.dataset.mode;friend=null;save.mode=mode;persist();newRun();renderHome();return;}
+  const m=e.target.closest('[data-mode]');if(m){mode=m.dataset.mode;save.mode=mode;persist();newRun();renderHome();return;}
 });
 $('bPlay').onclick=function(){initAudio();sfx.start();startPlay();};
-$('bShare').onclick=function(){
-  const c=makeCode();
-  shareText('Ozmora · I scored '+run.score+'. Think you can beat it? Open Ozmora, choose Friend and enter '+c);
-};
 $('bRetry').onclick=function(){if(overT>.25)leaveOver(function(){sfx.start();startPlay();});};
 $('bRevive').onclick=function(){revive();};
 $('bEnd').onclick=function(){closeRev();};
@@ -1454,7 +1424,6 @@ addEventListener('pointerdown',function(e){
   if(state==='play'&&player.latched)release(false);
 },{passive:false});
 addEventListener('keydown',function(e){
-  if(e.target&&e.target.tagName==='INPUT'){if(e.code==='Enter'&&$('codeIn'))act('friendgo');return;}
   if(e.code==='Space'||e.code==='Enter'){
     e.preventDefault();initAudio();
     if(state==='play'&&player.latched)release(false);
