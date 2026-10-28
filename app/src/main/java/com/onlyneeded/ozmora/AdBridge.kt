@@ -117,7 +117,6 @@ class AdBridge(
                     interstitialFailures++
                     firstInterstitial = true; bootCheck()
                     note("interstitial failed: code ${error.code} ${error.message}")
-                    main.postDelayed({ loadInterstitial() }, backoff(interstitialFailures))
                 }
             },
         )
@@ -146,7 +145,6 @@ class AdBridge(
                     firstRewarded = true; bootCheck()
                     note("rewarded failed: code ${error.code} ${error.message}")
                     notifyGame("rewarded", "loadfailed")
-                    main.postDelayed({ loadRewarded() }, backoff(rewardedFailures))
                 }
             },
         )
@@ -159,17 +157,13 @@ class AdBridge(
         main.post { web.evaluateJavascript("window.tetherAdsBoot&&window.tetherAdsBoot()", null) }
     }
 
-    /** 15 s, 30 s, 60 s ... capped at 5 minutes. */
-    private fun backoff(failures: Int): Long =
-        minOf(300_000L, 15_000L * (1L shl minOf(failures - 1, 5)))
-
     /** Loaded ads expire after about an hour; treat older ones as gone. */
     private fun fresh(loadedAt: Long) = System.currentTimeMillis() - loadedAt < 50 * 60 * 1000L
 
     // ---------------------------------------------------------------- called from the game (JS thread)
 
-    /** The game tells us when a run starts/ends. Ads are only requested while nobody is playing,
-     *  because loading an ad does work on the main thread and can make the game stutter. */
+    /** Ads are requested only during the loading screen and on the game-over screen, never on home or
+     *  during a run (true = blocked), because loading an ad can make the game stutter. */
     @JavascriptInterface
     fun setPlaying(p: Boolean) {
         playing = p
@@ -191,7 +185,6 @@ class AdBridge(
             val ad = rewarded
             if (showing || ad == null || !fresh(rewardedLoadedAt)) {
                 rewarded = null
-                loadRewarded()
                 notifyGame("rewarded", "failed")
                 return@post
             }
@@ -201,14 +194,12 @@ class AdBridge(
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     showing = false
-                    loadRewarded()
                     // Reward is given only after the ad is closed, so the game resumes cleanly.
                     notifyGame("rewarded", if (earned) "reward" else "closed")
                 }
 
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
                     showing = false
-                    loadRewarded()
                     notifyGame("rewarded", "failed")
                 }
             }
@@ -222,7 +213,6 @@ class AdBridge(
             val ad = interstitial
             if (showing || ad == null || !fresh(interstitialLoadedAt)) {
                 interstitial = null
-                loadInterstitial()
                 notifyGame("interstitial", "failed")
                 return@post
             }
@@ -231,13 +221,11 @@ class AdBridge(
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     showing = false
-                    loadInterstitial()
                     notifyGame("interstitial", "closed")
                 }
 
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
                     showing = false
-                    loadInterstitial()
                     notifyGame("interstitial", "failed")
                 }
             }

@@ -1185,7 +1185,13 @@ const AD_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><
 const Ads={
   busy:false,cb:null,since:0,last:Date.now(),want:false,wantT:0,
   /* tells the app when a run is in progress, so it never loads ads in the middle of play */
-  playing(p){try{if(this.has()&&window.AndroidAds.setPlaying)window.AndroidAds.setPlaying(!!p);}catch(e){}},
+  bootDone:false,blocked:null,
+  /* the app may load ads only while the loading screen is up or on the game-over screen, never on home or in a run */
+  sync(){
+    if(!this.bootDone)return;
+    const b=state!=='over';if(b===this.blocked)return;this.blocked=b;
+    try{if(this.has()&&window.AndroidAds.setPlaying)window.AndroidAds.setPlaying(b);}catch(e){}
+  },
   has(){return typeof window.AndroidAds!=='undefined'&&window.AndroidAds!==null;},
   rewardedReady(){try{return this.has()&&!this.busy&&!!window.AndroidAds.hasRewarded();}catch(e){return false;}},
   showRewarded(done){
@@ -1205,10 +1211,18 @@ const Ads={
     if(cb)cb(kind==='rewarded'?status==='reward':true);
   }
 };
+/* the ad could not be loaded: say so and go straight to the score screen (no ad is shown) */
+function adFail(){toast("Can't load ad");sfx.error();closeRev();}
 function adWaitEnd(){Ads.want=false;Ads.wantT=0;$('bAdRevive').innerHTML=AD_ICON+'Watch ad to revive';}
 window.tetherAdEvent=function(kind,status){
-  if(kind==='rewarded'&&status==='ready'){if(Ads.want&&revOpen){adWaitEnd();$('bAdRevive').onclick();}return;}
-  if(kind==='rewarded'&&status==='loadfailed'){if(Ads.want){adWaitEnd();toast("Can't load ad. Check your internet and try again");sfx.error();}return;}
+  if(kind==='rewarded'&&status==='ready'){
+    if(Ads.want&&revOpen){
+      Ads.want=false;
+      Ads.showRewarded(function(ok){if(ok){run.adUsed=true;revive(true);}else adFail();});
+    }
+    return;
+  }
+  if(kind==='rewarded'&&status==='loadfailed'){if(Ads.want&&revOpen)adFail();return;}
   Ads.finish(kind,status);
 };
 /* leaving the game-over screen: show an interstitial first when one is due */
@@ -1249,12 +1263,11 @@ function closeRev(){
 }
 function tickRevive(dt){
   if(!revOpen||Ads.busy)return;
-  if(Ads.want){Ads.wantT+=dt;if(Ads.wantT>6){adWaitEnd();toast("Can't load ad. Check your internet and try again");sfx.error();}return;}
   rvLeft-=dt;
   const f=Math.max(0,rvLeft/REVIVE_TIME);
   $('rvTimer').firstChild.style.transform='scaleX('+f+')';
   $('rvTimer').classList.toggle('low',rvLeft<2.2);
-  if(rvLeft<=0)closeRev();
+  if(rvLeft<=0){if(Ads.want)adFail();else closeRev();}
 }
 function renderHome(){
   ensureDay();
@@ -1401,14 +1414,16 @@ $('bRevive').onclick=function(){revive();};
 $('bEnd').onclick=function(){closeRev();};
 $('bHome').onclick=function(){leaveOver(showHome);};
 $('bAdRevive').onclick=function(){
+  if(Ads.want||Ads.busy||!revOpen)return;
+  /* every tap restarts the timer; the ad has until it runs out */
+  rvLeft=REVIVE_TIME;$('rvTimer').classList.remove('low');$('rvTimer').firstChild.style.transform='scaleX(1)';
   if(!Ads.rewardedReady()){
-    if(Ads.want||Ads.busy)return;
-    /* not loaded yet: ask the app to load it now and show it the moment it is ready */
-    Ads.want=true;Ads.wantT=0;$('bAdRevive').innerHTML=AD_ICON+'Loading ad…';
+    /* not loaded: ask the app to load it now; it is shown the moment it is ready */
+    Ads.want=true;$('bAdRevive').innerHTML=AD_ICON+'Loading ad…';
     try{window.AndroidAds.retryRewarded&&window.AndroidAds.retryRewarded();}catch(e){}
     return;
   }
-  Ads.showRewarded(function(ok){if(ok){run.adUsed=true;revive(true);}else toast("Can't load ad. Try again");});
+  Ads.showRewarded(function(ok){if(ok){run.adUsed=true;revive(true);}else adFail();});
 };
 $('bPause').onclick=function(){setPause(true);};
 $('bResume').onclick=function(){setPause(false);};
@@ -1816,7 +1831,7 @@ function frame(now){
     update(real*ts,real);
   }
   governor(now,raw);
-  if(state!==bodyState){const wasP=bodyState==='play';bodyState=state;document.body.classList.toggle('playing',state==='play');if(wasP!==(state==='play'))Ads.playing(state==='play');}
+  if(state!==bodyState){bodyState=state;document.body.classList.toggle('playing',state==='play');Ads.sync();}
   /* nothing moves while paused or while a sheet covers the screen, so skip redrawing */
   if(state!=='pause'&&sheetKind===null)draw();
   requestAnimationFrame(frame);
@@ -1836,7 +1851,7 @@ requestAnimationFrame(frame);
 /* ---- loading screen: shows from the very first paint, leaves once the game has drawn a few frames ---- */
 (function(){
   const t0=window.__t0||0;let n=0;
-  function done(){const b=document.getElementById('boot');if(!b)return;b.classList.add('out');setTimeout(function(){b.remove();},520);}
+  function done(){Ads.bootDone=true;Ads.sync();const b=document.getElementById('boot');if(!b)return;b.classList.add('out');setTimeout(function(){b.remove();},520);}
   /* in the app, the loading screen also waits for the ad system's first loading round (its set-up is what
      used to stutter the home screen), but never longer than 4.5 s */
   const adsBoot=Ads.has()?new Promise(function(r){window.tetherAdsBoot=function(){setTimeout(r,350);};setTimeout(r,4500);}):Promise.resolve();
