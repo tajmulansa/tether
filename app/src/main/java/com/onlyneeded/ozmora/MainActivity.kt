@@ -90,6 +90,8 @@ class MainActivity : ComponentActivity() {
         ads = AdBridge(this, web)
         web.addJavascriptInterface(ads, "AndroidAds")
 
+        // Keep the page renderer at high priority so the system does not throttle it while we play.
+        web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
         setContentView(web)
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html")
 

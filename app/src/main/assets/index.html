@@ -256,6 +256,7 @@ button:active{transform:scale(.96)}
 #ovBar{width:100%;max-width:240px;height:3px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;margin:10px 0 14px}
 #ovBar i{display:block;height:100%;width:0;border-radius:3px;background:var(--tx);opacity:.85;transition:width .9s cubic-bezier(.2,.8,.2,1) .25s}
 #ovBar.gold i{background:var(--gold);opacity:1}
+#fpsm{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);transform:translateX(-50%);z-index:60;pointer-events:none;font:500 10.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.04em;color:rgba(255,255,255,.55);background:rgba(0,0,0,.35);padding:4px 8px;border-radius:8px;white-space:nowrap}
 #hTgt{margin-top:3px;font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:center;transition:color .3s}
 #hTgt.gold{color:var(--gold)}
 /*MORE*/.more{padding:14px 2px 4px;color:var(--faint);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
@@ -351,6 +352,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
 <div id="fxl" data-z="0"><div class="fx fa"></div><div class="fx fh"></div><div class="fx fd"></div><div class="fx fs" id="fxs"></div></div>
 <div id="zbn"><small id="zbN">Zone 2</small><b id="zbT">Aurora</b><span id="zbS"></span><em id="zbR"></em></div>
 
+<div id="fpsm" class="hide"></div>
 <div id="hud" class="hide">
   <button id="bPause" class="ibtn" aria-label="Pause"><svg viewBox="0 0 24 24" width="16" height="16"><rect x="7" y="5" width="3" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="3" height="14" rx="1.2" fill="currentColor"/></svg></button>
   <div id="hMid"><div id="hScore">0</div><div id="hZone">Nebula</div><div id="hTgt" class="hide"></div><div id="hBar"><i id="hBarFill"></i></div></div>
@@ -457,7 +459,7 @@ function resetIn(){const n=new Date(),m=new Date(n.getFullYear(),n.getMonth(),n.
 const DEF=()=>({v:2,coins:0,bestAll:0,best:0,bestIdx:0,daily:{day:0,best:0,idx:0},
   owned:{trail:['neon'],skin:['pearl']},sel:{trail:'neon',skin:'pearl'},
   stats:{runs:0,latches:0,shards:0,perfects:0,bestCombo:0,time:0,powerups:0},ach:{},
-  missions:{day:0,list:[]},disc:{0:1},streak:{last:0,n:0},set:{sfx:1,music:1,haptic:1,shake:1,guide:1},mode:'free'});
+  missions:{day:0,list:[]},disc:{0:1},streak:{last:0,n:0},set:{sfx:1,music:1,haptic:1,shake:1,guide:1,fps:0},mode:'free'});
 function merge(t,s){for(const k in s){if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])&&t[k]&&typeof t[k]==='object')merge(t[k],s[k]);else t[k]=s[k];}}
 function loadSave(){const d=DEF();try{const r=JSON.parse(localStorage.getItem('tether_v2')||'null');if(r)merge(d,r);}catch(e){}return d;}
 let save=loadSave();
@@ -1375,7 +1377,7 @@ function statsHTML(){
   return voy+'<h3>Stats</h3><div class="stat-grid">'+cells.map(c=>'<div class="stat"><b>'+c[1]+'</b><span>'+c[0]+'</span></div>').join('')+'</div>';
 }
 function settingsHTML(){
-  const rows=[['sfx','Sound effects'],['music','Music'],['haptic','Vibration'],['shake','Screen shake'],['guide','Aim guide']];
+  const rows=[['sfx','Sound effects'],['music','Music'],['haptic','Vibration'],['shake','Screen shake'],['guide','Aim guide'],['fps','Performance meter']];
   return rows.map(r=>'<div class="row-s"><span>'+r[1]+'</span><button class="sw '+(save.set[r[0]]?'on':'')+'" data-a="set:'+r[0]+'" aria-label="'+r[1]+'"></button></div>').join('')+
     '<button class="danger" data-a="reset">'+(resetArm?'Tap again to erase all progress':'Reset progress')+'</button>';
 }
@@ -1393,7 +1395,7 @@ function act(s){
       const m=save.missions.list[+a[1]];
       if(m&&!m.claimed&&m.prog>=m.target){m.claimed=true;save.coins+=m.rew;persist();toast('+'+m.rew+' shards');sfx.claim();}
       renderSheet();break;}
-    case 'set':save.set[a[1]]=save.set[a[1]]?0:1;if(a[1]==='music'){if(save.set.music){startMusic();}else{stopMusic();}}persist();renderSheet();break;
+    case 'set':save.set[a[1]]=save.set[a[1]]?0:1;if(a[1]==='fps'&&!save.set.fps)$('fpsm').classList.add('hide');if(a[1]==='music'){if(save.set.music){startMusic();}else{stopMusic();}}persist();renderSheet();break;
     case 'reset':
       if(!resetArm){resetArm=true;renderSheet();}
       else{try{localStorage.removeItem('tether_v2');}catch(e){}location.reload();}
@@ -1821,6 +1823,7 @@ function wake(){
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden)wake();});
 addEventListener('focus',function(){wake();});
+let mN=0,mW=0,mS=0,mT=0;
 function frame(now){
   /* 120 Hz phones: render every other refresh (about 60 fps) so each frame has twice the time */
   if(now-last<10.5){requestAnimationFrame(frame);return;}
@@ -1831,6 +1834,14 @@ function frame(now){
     update(real*ts,real);
   }
   governor(now,raw);
+  if(save.set.fps){
+    mN++;if(raw>mW)mW=raw;if(raw>34)mS++;
+    if(now-mT>=1000){
+      const el=$('fpsm');el.classList.remove('hide');
+      el.textContent=Math.round(mN*1000/(now-mT))+' fps · worst '+Math.round(mW)+' ms · hitches '+mS+' · scale '+renderScale.toFixed(2)+' · dpr '+(window.devicePixelRatio||1).toFixed(2);
+      mN=0;mW=0;mS=0;mT=now;
+    }
+  }
   if(state!==bodyState){bodyState=state;document.body.classList.toggle('playing',state==='play');Ads.sync();}
   /* nothing moves while paused or while a sheet covers the screen, so skip redrawing */
   if(state!=='pause'&&sheetKind===null)draw();
