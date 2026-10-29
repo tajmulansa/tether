@@ -17,9 +17,9 @@ object AdStore {
     @Volatile var replyTo: Messenger? = null
 
     /** kind: "rewarded" | "interstitial"; status: loaded, loadfailed, reward, closed, failed */
-    fun report(kind: String, status: String) {
+    fun report(kind: String, status: String, info: String = "") {
         val m = Message.obtain(null, MSG_EVENT)
-        m.data = Bundle().apply { putString("kind", kind); putString("status", status) }
+        m.data = Bundle().apply { putString("kind", kind); putString("status", status); putString("info", info) }
         try { replyTo?.send(m) } catch (_: Exception) {}
     }
 }

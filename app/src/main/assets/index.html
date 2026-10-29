@@ -260,7 +260,7 @@ body.lite .dotmark .orb{animation:none}
 #ovBar{width:100%;max-width:240px;height:3px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;margin:10px 0 14px}
 #ovBar i{display:block;height:100%;width:0;border-radius:3px;background:var(--tx);opacity:.85;transition:width .9s cubic-bezier(.2,.8,.2,1) .25s}
 #ovBar.gold i{background:var(--gold);opacity:1}
-#fpsm{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);transform:translateX(-50%);z-index:60;pointer-events:none;font:500 10.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.04em;color:rgba(255,255,255,.55);background:rgba(0,0,0,.35);padding:4px 8px;border-radius:8px;white-space:nowrap}
+#fpsm{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);transform:translateX(-50%);z-index:60;pointer-events:none;font:500 10px/1.35 ui-monospace,Menlo,monospace;letter-spacing:.04em;color:rgba(255,255,255,.55);background:rgba(0,0,0,.35);padding:4px 8px;border-radius:8px;max-width:94vw;text-align:center;line-height:1.35}
 #hTgt{margin-top:3px;font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:center;transition:color .3s}
 #hTgt.gold{color:var(--gold)}
 /*MORE*/.more{padding:14px 2px 4px;color:var(--faint);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
@@ -1220,6 +1220,7 @@ const Ads={
 /* the ad could not be loaded: say so and go straight to the score screen (no ad is shown) */
 function adFail(){toast("Can't load ad");sfx.error();closeRev();}
 function adWaitEnd(){Ads.want=false;Ads.wantT=0;$('bAdRevive').innerHTML=AD_ICON+'Watch ad to revive';}
+let adLog='';window.tetherAdLog=function(m){adLog=m;};
 window.tetherAdEvent=function(kind,status){
   if(kind==='rewarded'&&status==='ready'){
     if(Ads.want&&revOpen){
@@ -1849,7 +1850,7 @@ function frame(now){
     mN++;if(raw>mW)mW=raw;if(raw>34)mS++;
     if(now-mT>=1000){
       const el=$('fpsm');el.classList.remove('hide');
-      el.textContent=Math.round(mN*1000/(now-mT))+' fps · worst '+Math.round(mW)+' ms · hitches '+mS+' · scale '+renderScale.toFixed(2)+' · dpr '+(window.devicePixelRatio||1).toFixed(2);
+      el.textContent=Math.round(mN*1000/(now-mT))+' fps · worst '+Math.round(mW)+' ms · hitches '+mS+' · scale '+renderScale.toFixed(2)+' · dpr '+(window.devicePixelRatio||1).toFixed(2)+(Ads.has()?' · ads: '+(adLog||'-'):'');
       mN=0;mW=0;mS=0;mT=now;
     }
   }

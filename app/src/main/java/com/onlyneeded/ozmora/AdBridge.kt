@@ -45,7 +45,12 @@ class AdBridge(
     private var bootSent = false
     @Volatile private var playing = false   // home screen or a run: do not load ads now
 
-    private fun note(msg: String) { Log.d("OzmoraAds", msg) }
+    /** Ad status: goes to the log and, for the in-game performance meter, to the page. */
+    private fun note(msg: String) {
+        Log.d("OzmoraAds", msg)
+        val safe = msg.replace("\\", " ").replace("'", " ").replace("\n", " ").take(90)
+        main.post { web.evaluateJavascript("window.tetherAdLog&&window.tetherAdLog('$safe')", null) }
+    }
 
     // ---------------------------------------------------------------- startup + consent
 
@@ -87,7 +92,9 @@ class AdBridge(
 
     private val inbox = Messenger(Handler(Looper.getMainLooper()) { msg ->
         if (msg.what == AdStore.MSG_EVENT) {
-            onAdEvent(msg.data.getString("kind") ?: "", msg.data.getString("status") ?: "")
+            val k = msg.data.getString("kind") ?: ""; val st = msg.data.getString("status") ?: ""
+            note("$k $st ${msg.data.getString("info") ?: ""}")
+            onAdEvent(k, st)
         }
         true
     })
@@ -99,6 +106,7 @@ class AdBridge(
             requestLoads()
         }
         override fun onServiceDisconnected(name: ComponentName?) {
+            note("ads process stopped")
             service = null; rewardedLoaded = false; interstitialLoaded = false; showing = false
         }
     }

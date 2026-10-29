@@ -1,6 +1,7 @@
 package com.onlyneeded.ozmora
 
 import android.app.Application
+import android.content.Context
 import android.webkit.WebView
 import java.io.File
 
@@ -9,8 +10,9 @@ import java.io.File
  * the game. A second process needs its own WebView data directory.
  */
 class OzmoraApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
+    // attachBaseContext runs before content providers start (the ad SDK's provider uses WebView).
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
         if (isAdsProcess()) {
             try { WebView.setDataDirectorySuffix("ads") } catch (_: Exception) {}
         }

@@ -17,7 +17,6 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 
 /** Runs in the ":ads" process. Loads ads on request from the game process; shows happen in AdHostActivity. */
 class AdsService : Service() {
-    private var initialised = false
     private var loadingR = false
     private var loadingI = false
 
@@ -33,12 +32,26 @@ class AdsService : Service() {
 
     override fun onBind(intent: Intent?): IBinder = messenger.binder
 
+    private var sdkState = 0            // 0 = not started, 1 = starting, 2 = ready
+    private val pending = ArrayList<() -> Unit>()
+
+    /** Runs [then] once the ad SDK is initialised (starting it on first use). */
     private fun withSdk(then: () -> Unit) {
-        if (initialised) { then(); return }
-        initialised = true
-        MobileAds.initialize(applicationContext) { then2(then) }
+        when (sdkState) {
+            2 -> then()
+            1 -> pending.add(then)
+            else -> {
+                sdkState = 1; pending.add(then)
+                MobileAds.initialize(applicationContext) {
+                    Handler(Looper.getMainLooper()).post {
+                        sdkState = 2
+                        val todo = ArrayList(pending); pending.clear()
+                        todo.forEach { it() }
+                    }
+                }
+            }
+        }
     }
-    private fun then2(then: () -> Unit) { Handler(Looper.getMainLooper()).post(then) }
 
     private fun loadRewarded() {
         if (loadingR || AdStore.rewarded != null) { if (AdStore.rewarded != null) AdStore.report("rewarded", "loaded"); return }
@@ -51,7 +64,7 @@ class AdsService : Service() {
                 override fun onAdFailedToLoad(e: LoadAdError) {
                     loadingR = false; AdStore.rewarded = null
                     Log.d("OzmoraAds", "rewarded failed ${e.code} ${e.message}")
-                    AdStore.report("rewarded", "loadfailed")
+                    AdStore.report("rewarded", "loadfailed", "code ${e.code} ${e.message}")
                 }
             })
     }
@@ -67,7 +80,7 @@ class AdsService : Service() {
                 override fun onAdFailedToLoad(e: LoadAdError) {
                     loadingI = false; AdStore.interstitial = null
                     Log.d("OzmoraAds", "interstitial failed ${e.code} ${e.message}")
-                    AdStore.report("interstitial", "loadfailed")
+                    AdStore.report("interstitial", "loadfailed", "code ${e.code} ${e.message}")
                 }
             })
     }
