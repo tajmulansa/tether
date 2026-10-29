@@ -221,6 +221,10 @@ button:active{transform:scale(.96)}
 @keyframes boSpin{to{transform:rotate(360deg)}}
 @keyframes boFade{50%{opacity:.35}}
 /* zone atmosphere layers (opacity-only fades) */
+/* glass blur re-computes every frame over the live canvas: off while playing, and in lite mode all extras go */
+body.playing *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.lite #fxl{display:none}
+body.lite .dotmark .orb{animation:none}
 #fxl{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
 #fxl .fx{position:absolute;opacity:0;visibility:hidden;transition:opacity 2.2s ease,visibility 0s 2.2s}
 #fxl[data-z="1"] .fa,#fxl[data-z="6"] .fd,#fxl[data-z="7"] .fh{opacity:1;visibility:visible;transition:opacity 2.2s ease}
@@ -1012,7 +1016,7 @@ function spawn(){
 }
 
 function burst(x,y,n,col,spd){
-  if(parts.length>(renderScale<.85?60:110))return;
+  if(parts.length>(lite?24:renderScale<.85?60:110))return;
   for(let i=0;i<n;i++){
     const an=Math.random()*6.283,v=(.3+Math.random())*(spd||120);
     parts.push({x:x,y:y,vx:Math.cos(an)*v,vy:Math.sin(an)*v,life:.5+Math.random()*.4,max:.9,col:col});
@@ -1802,13 +1806,17 @@ function draw(){
 /* ---------- loop ---------- */
 let last=performance.now();
 /* If the phone cannot keep up, draw at a lower resolution until it can (the picture stays sharp enough, the game stays smooth). */
-let gAvg=16.7,gLast=0,gGood=0,gUps=0,bodyState='';
+let gAvg=16.7,gLast=0,gGood=0,gUps=0,bodyState='',lite=false,gBad=0,gOk=0;
+function setLite(on){if(lite===on)return;lite=on;document.body.classList.toggle('lite',on);gBad=0;gOk=0;}
 /* Adaptive quality: drops resolution fast when frames get slow (e.g. the phone's GPU path
    degrades after a notification or an ad), and gives some back when it runs smoothly again. */
 function governor(now,raw){
   if(state!=='play'||document.hidden||raw>250)return;
   gAvg+=(raw-gAvg)*.08;
   const since=now-gLast;
+  /* still slow at the lowest resolution: switch to lite mode (no sky effects, fewer particles); come back once it is smooth */
+  if(!lite){if(renderScale<=.55&&gAvg>30){gBad+=raw;if(gBad>4000)setLite(true);}else gBad=0;}
+  else{if(gAvg<20){gOk+=raw;if(gOk>12000){setLite(false);}}else gOk=0;}
   if(gAvg>24&&since>1500&&renderScale>.52){
     renderScale=Math.max(.5,renderScale*(gAvg>40?.68:.85));gLast=now;gAvg=16.7;gGood=0;resize();
   }else if(gAvg<18.5&&renderScale<1&&gUps<8){
@@ -1819,7 +1827,8 @@ function governor(now,raw){
 /* coming back from a notification shade, another app or an ad: reset timing and re-create the canvas buffer */
 function wake(){
   last=performance.now();gAvg=16.7;gGood=0;gLast=performance.now();
-  renderScale=1;gUps=0;resize();
+  renderScale=1;gUps=0;setLite(false);resize();
+  try{if(AC&&AC.state!=='running'&&!document.hidden)AC.resume();}catch(e){}
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden)wake();});
 addEventListener('focus',function(){wake();});

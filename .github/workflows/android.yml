@@ -32,6 +32,17 @@ jobs:
           name: ozmora-debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
+      # Same game with the ad SDK completely off (separate app, installs next to the normal one):
+      # use it to tell whether stutter comes from the ads.
+      - name: Build no-ads test APK
+        run: gradle assembleDebug -PnoAds --no-daemon
+
+      - name: Upload no-ads test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ozmora-noads-test-apk
+          path: app/build/outputs/apk/debug/*.apk
+
       # Signed release builds only run when the keystore secrets are configured (see README).
       - name: Decode keystore
         if: env.KEYSTORE_BASE64 != ''

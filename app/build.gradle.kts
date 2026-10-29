@@ -13,6 +13,8 @@ val keystorePath: String? = System.getenv("KEYSTORE_PATH")
 val testAppId = "ca-app-pub-3940256099942544~3347511713"
 val testInterstitialId = "ca-app-pub-3940256099942544/1033173712"
 val testRewardedId = "ca-app-pub-3940256099942544/5224354917"
+// Test build with the ad SDK switched off completely (gradle -PnoAds): installs next to the normal app.
+val noAds = project.hasProperty("noAds")
 fun envOr(name: String, fallback: String): String =
     System.getenv(name)?.takeIf { it.isNotBlank() } ?: fallback
 
@@ -24,8 +26,8 @@ android {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 35
-        versionCode = 21
-        versionName = "2.2"
+        versionCode = 22
+        versionName = "2.3"
     }
 
     if (keystorePath != null) {
@@ -42,9 +44,11 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    defaultConfig.buildConfigField("boolean", "ADS_ENABLED", if (noAds) "false" else "true")
 
     buildTypes {
         debug {
+            if (noAds) applicationIdSuffix = ".noads"
             manifestPlaceholders["admobAppId"] = testAppId
             buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"$testInterstitialId\"")
             buildConfigField("String", "ADMOB_REWARDED_ID", "\"$testRewardedId\"")
