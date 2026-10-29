@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Needed by AdMob (ads) -->
@@ -8,6 +9,7 @@
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <application
+        android:name=".OzmoraApp"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
         android:appCategory="game"
@@ -20,6 +22,19 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="${admobAppId}" />
+
+        <!-- The ad SDK and everything it shows run in their own process (":ads"), away from the game. -->
+        <service android:name=".AdsService" android:process=":ads" android:exported="false" />
+        <activity
+            android:name=".AdHostActivity"
+            android:process=":ads"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|density|uiMode"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity android:name="com.google.android.gms.ads.AdActivity" android:process=":ads" />
+        <provider android:name="com.google.android.gms.ads.MobileAdsInitProvider" android:process=":ads" tools:node="merge" />
 
         <activity
             android:name=".MainActivity"

@@ -1,19 +1,17 @@
 package com.onlyneeded.ozmora
 
-import android.util.Log
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
+import android.os.Message
+import android.os.Messenger
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import com.google.android.gms.ads.AdError
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.FullScreenContentCallback
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.interstitial.InterstitialAd
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-import com.google.android.gms.ads.rewarded.RewardedAd
-import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
@@ -22,11 +20,11 @@ import com.google.android.ump.UserMessagingPlatform
  * Connects AdMob to the game. The game (HTML) calls the @JavascriptInterface methods through
  * `window.AndroidAds` and gets answers back through `window.tetherAdEvent(kind, status)`.
  *
+ * The ad SDK itself runs in a separate process (":ads", see AdsService / AdHostActivity) so its web
+ * views never compete with the game for CPU. This class only talks to that process.
+ *
  *  - rewarded:     status "reward" (watched, give the reward), "closed" (skipped) or "failed"
  *  - interstitial: status "closed" or "failed"; the game continues in both cases
- *
- * Ads are loaded in advance, so showing one is instant. Nothing is requested before the
- * consent flow (UMP) says ads may be requested.
  */
 class AdBridge(
     private val activity: MainActivity,
@@ -34,27 +32,20 @@ class AdBridge(
 ) {
     private val main = Handler(Looper.getMainLooper())
 
-    @Volatile private var interstitial: InterstitialAd? = null
-    @Volatile private var rewarded: RewardedAd? = null
-    @Volatile private var rewardedLoadedAt = 0L
-    private var interstitialLoadedAt = 0L
-
     private var started = false
-    private var sdkInitialised = false
-    private var loadingInterstitial = false
-    private var loadingRewarded = false
-    private var interstitialFailures = 0
-    private var rewardedFailures = 0
-    private var showing = false
+    private var service: Messenger? = null
+    private var bound = false
+    private var rewardedLoaded = false
+    private var interstitialLoaded = false
+    private var rewardedLoadedAt = 0L
+    private var interstitialLoadedAt = 0L
+    @Volatile private var showing = false
     private var firstInterstitial = false
     private var firstRewarded = false
     private var bootSent = false
-    @Volatile private var playing = false   // a run is in progress: do not load ads now
+    @Volatile private var playing = false   // home screen or a run: do not load ads now
 
-    /** Ad status goes to the log only (adb logcat -s TetherAds); nothing is shown on screen. */
-    private fun note(msg: String) {
-        Log.d("TetherAds", msg)
-    }
+    private fun note(msg: String) { Log.d("OzmoraAds", msg) }
 
     // ---------------------------------------------------------------- startup + consent
 
@@ -63,91 +54,86 @@ class AdBridge(
         started = true
         val consent = UserMessagingPlatform.getConsentInformation(activity)
         val params = ConsentRequestParameters.Builder().build()
-
         consent.requestConsentInfoUpdate(
             activity, params,
             {
-                // Shows the consent form only when the user's region requires it.
-                UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) {
-                    initIfAllowed(consent)
-                }
+                UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { connectIfAllowed(consent) }
             },
-            { err -> note("consent error ${err.errorCode}: ${err.message}"); initIfAllowed(consent) },
+            { err -> note("consent error ${err.errorCode}: ${err.message}"); connectIfAllowed(consent) },
         )
-        // Returning users who already gave consent can start right away.
-        initIfAllowed(consent)
+        connectIfAllowed(consent)
     }
 
-    private fun initIfAllowed(consent: ConsentInformation) {
+    private fun connectIfAllowed(consent: ConsentInformation) {
         if (!consent.canRequestAds()) { note("waiting for consent"); return }
-        if (sdkInitialised) return
-        sdkInitialised = true
-        // Initialise off the main thread, as Google recommends.
-        Thread {
-            MobileAds.initialize(activity) {
-                note("SDK ready, loading ads")
-                main.post {
-                    loadInterstitial()
-                    loadRewarded()
+        if (bound) return
+        bound = true
+        // Give the consent choice a moment to reach disk before the ads process reads it.
+        main.postDelayed({
+            val ok = try {
+                activity.bindService(Intent(activity, AdsService::class.java), conn, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) { false }
+            note("binding ads process: $ok")
+            if (!ok) { firstRewarded = true; firstInterstitial = true; bootCheck() }
+        }, 300)
+    }
+
+    fun stop() {
+        if (service != null || bound) { try { activity.unbindService(conn) } catch (_: Exception) {} }
+        service = null; bound = false
+    }
+
+    // ---------------------------------------------------------------- ads process connection
+
+    private val inbox = Messenger(Handler(Looper.getMainLooper()) { msg ->
+        if (msg.what == AdStore.MSG_EVENT) {
+            onAdEvent(msg.data.getString("kind") ?: "", msg.data.getString("status") ?: "")
+        }
+        true
+    })
+
+    private val conn = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            service = Messenger(binder)
+            note("ads process connected")
+            requestLoads()
+        }
+        override fun onServiceDisconnected(name: ComponentName?) {
+            service = null; rewardedLoaded = false; interstitialLoaded = false; showing = false
+        }
+    }
+
+    private fun send(what: Int) {
+        try { val m = Message.obtain(null, what); m.replyTo = inbox; service?.send(m) }
+        catch (e: Exception) { note("send failed: $e") }
+    }
+
+    /** Asks the ads process to load whatever is missing (only during loading and on the game-over screen). */
+    private fun requestLoads() {
+        if (service == null || playing) return
+        if (!rewardedLoaded) send(AdStore.MSG_LOAD_REWARDED)
+        if (!interstitialLoaded) send(AdStore.MSG_LOAD_INTERSTITIAL)
+    }
+
+    private fun onAdEvent(kind: String, status: String) {
+        when (kind) {
+            "rewarded" -> when (status) {
+                "loaded" -> {
+                    rewardedLoaded = true; rewardedLoadedAt = System.currentTimeMillis()
+                    firstRewarded = true; bootCheck(); notifyGame("rewarded", "ready")
                 }
+                "loadfailed" -> { rewardedLoaded = false; firstRewarded = true; bootCheck(); notifyGame("rewarded", "loadfailed") }
+                else -> { showing = false; rewardedLoaded = false; notifyGame("rewarded", status) }
             }
-        }.start()
-    }
-
-    // ---------------------------------------------------------------- loading
-
-    private fun loadInterstitial() {
-        if (!sdkInitialised || playing || loadingInterstitial || interstitial != null) return
-        loadingInterstitial = true
-        InterstitialAd.load(
-            activity, BuildConfig.ADMOB_INTERSTITIAL_ID, AdRequest.Builder().build(),
-            object : InterstitialAdLoadCallback() {
-                override fun onAdLoaded(ad: InterstitialAd) {
-                    loadingInterstitial = false
-                    interstitialFailures = 0
+            "interstitial" -> when (status) {
+                "loaded" -> {
+                    interstitialLoaded = true; interstitialLoadedAt = System.currentTimeMillis()
                     firstInterstitial = true; bootCheck()
-                    interstitialLoadedAt = System.currentTimeMillis()
-                    interstitial = ad
-                    note("interstitial ad loaded")
                 }
-
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    loadingInterstitial = false
-                    interstitial = null
-                    interstitialFailures++
-                    firstInterstitial = true; bootCheck()
-                    note("interstitial failed: code ${error.code} ${error.message}")
-                }
-            },
-        )
-    }
-
-    private fun loadRewarded() {
-        if (!sdkInitialised || playing || loadingRewarded || rewarded != null) return
-        loadingRewarded = true
-        RewardedAd.load(
-            activity, BuildConfig.ADMOB_REWARDED_ID, AdRequest.Builder().build(),
-            object : RewardedAdLoadCallback() {
-                override fun onAdLoaded(ad: RewardedAd) {
-                    loadingRewarded = false
-                    rewardedFailures = 0
-                    firstRewarded = true; bootCheck()
-                    rewardedLoadedAt = System.currentTimeMillis()
-                    rewarded = ad
-                    note("rewarded ad loaded")
-                    notifyGame("rewarded", "ready")
-                }
-
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    loadingRewarded = false
-                    rewarded = null
-                    rewardedFailures++
-                    firstRewarded = true; bootCheck()
-                    note("rewarded failed: code ${error.code} ${error.message}")
-                    notifyGame("rewarded", "loadfailed")
-                }
-            },
-        )
+                "loadfailed" -> { interstitialLoaded = false; firstInterstitial = true; bootCheck() }
+                else -> { showing = false; interstitialLoaded = false; notifyGame("interstitial", status) }
+            }
+        }
     }
 
     /** Tells the loading screen that the first ad loading round is over (loaded or failed). */
@@ -162,74 +148,51 @@ class AdBridge(
 
     // ---------------------------------------------------------------- called from the game (JS thread)
 
-    /** Ads are requested only during the loading screen and on the game-over screen, never on home or
-     *  during a run (true = blocked), because loading an ad can make the game stutter. */
+    /** true = home screen or a run (no ad loading); false = loading screen / game-over screen. */
     @JavascriptInterface
     fun setPlaying(p: Boolean) {
         playing = p
-        if (!p) main.postDelayed({ if (!playing) { loadRewarded(); loadInterstitial() } }, 400)
+        if (!p) main.postDelayed({ if (!playing) requestLoads() }, 400)
     }
 
     @JavascriptInterface
-    fun hasRewarded(): Boolean = !showing && rewarded != null && fresh(rewardedLoadedAt)
+    fun hasRewarded(): Boolean = !showing && rewardedLoaded && fresh(rewardedLoadedAt)
 
-    /** The player tapped the revive-ad button but no ad was ready: try loading again right away. */
+    /** The player tapped the revive-ad button but no ad was ready: load now. */
     @JavascriptInterface
     fun retryRewarded() {
-        main.post { if (rewarded != null && !fresh(rewardedLoadedAt)) rewarded = null; loadRewarded() }
+        main.post {
+            if (rewardedLoaded && !fresh(rewardedLoadedAt)) rewardedLoaded = false
+            when {
+                service == null -> notifyGame("rewarded", "loadfailed")
+                rewardedLoaded -> notifyGame("rewarded", "ready")
+                else -> send(AdStore.MSG_LOAD_REWARDED)
+            }
+        }
+    }
+
+    private fun launchHost(kind: String) {
+        showing = true
+        try {
+            activity.startActivity(Intent(activity, AdHostActivity::class.java).putExtra("kind", kind))
+        } catch (e: Exception) { showing = false; notifyGame(kind, "failed") }
     }
 
     @JavascriptInterface
     fun showRewarded() {
         main.post {
-            val ad = rewarded
-            if (showing || ad == null || !fresh(rewardedLoadedAt)) {
-                rewarded = null
-                notifyGame("rewarded", "failed")
-                return@post
-            }
-            showing = true
-            rewarded = null
-            var earned = false
-            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                override fun onAdDismissedFullScreenContent() {
-                    showing = false
-                    // Reward is given only after the ad is closed, so the game resumes cleanly.
-                    notifyGame("rewarded", if (earned) "reward" else "closed")
-                }
-
-                override fun onAdFailedToShowFullScreenContent(error: AdError) {
-                    showing = false
-                    notifyGame("rewarded", "failed")
-                }
-            }
-            ad.show(activity) { earned = true }
+            if (showing || !rewardedLoaded || !fresh(rewardedLoadedAt)) { rewardedLoaded = false; notifyGame("rewarded", "failed"); return@post }
+            rewardedLoaded = false
+            launchHost("rewarded")
         }
     }
 
     @JavascriptInterface
     fun showInterstitial() {
         main.post {
-            val ad = interstitial
-            if (showing || ad == null || !fresh(interstitialLoadedAt)) {
-                interstitial = null
-                notifyGame("interstitial", "failed")
-                return@post
-            }
-            showing = true
-            interstitial = null
-            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                override fun onAdDismissedFullScreenContent() {
-                    showing = false
-                    notifyGame("interstitial", "closed")
-                }
-
-                override fun onAdFailedToShowFullScreenContent(error: AdError) {
-                    showing = false
-                    notifyGame("interstitial", "failed")
-                }
-            }
-            ad.show(activity)
+            if (showing || !interstitialLoaded || !fresh(interstitialLoadedAt)) { interstitialLoaded = false; notifyGame("interstitial", "failed"); return@post }
+            interstitialLoaded = false
+            launchHost("interstitial")
         }
     }
 
@@ -237,9 +200,7 @@ class AdBridge(
 
     private fun notifyGame(kind: String, status: String) {
         main.post {
-            web.evaluateJavascript(
-                "window.tetherAdEvent&&window.tetherAdEvent('$kind','$status')", null
-            )
+            web.evaluateJavascript("window.tetherAdEvent&&window.tetherAdEvent('$kind','$status')", null)
         }
     }
 }

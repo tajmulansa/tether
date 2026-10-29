@@ -136,6 +136,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        ads.stop()
         web.destroy()
         super.onDestroy()
     }
