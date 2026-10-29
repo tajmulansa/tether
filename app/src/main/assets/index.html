@@ -1296,7 +1296,7 @@ function startPlay(){
 }
 function setPause(on){
   if(on&&state==='play'){state='pause';sfx.pause();$('pause').classList.remove('hide');}
-  else if(!on&&state==='pause'){state='play';sfx.resume();$('pause').classList.add('hide');}
+  else if(!on&&state==='pause'){wake();state='play';sfx.resume();$('pause').classList.add('hide');}
 }
 function revive(free){
   if(run.revived)return;
@@ -1811,9 +1811,9 @@ function governor(now,raw){
   const since=now-gLast;
   if(gAvg>24&&since>1500&&renderScale>.52){
     renderScale=Math.max(.5,renderScale*(gAvg>40?.68:.85));gLast=now;gAvg=16.7;gGood=0;resize();
-  }else if(gAvg<18.5&&renderScale<1&&gUps<3){
+  }else if(gAvg<18.5&&renderScale<1&&gUps<8){
     gGood+=raw;
-    if(gGood>12000&&since>12000){renderScale=Math.min(1,renderScale*1.2);gLast=now;gGood=0;gUps++;resize();}
+    if(gGood>8000&&since>8000){renderScale=Math.min(1,renderScale*1.2);gLast=now;gGood=0;gUps++;resize();}
   }else gGood=0;
 }
 /* coming back from a notification shade, another app or an ad: reset timing and re-create the canvas buffer */
@@ -1823,6 +1823,8 @@ function wake(){
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden)wake();});
 addEventListener('focus',function(){wake();});
+/* a call, notification pop-up or the shade steals focus without hiding the page: pause the run */
+addEventListener('blur',function(){if(state==='play')setPause(true);});
 let mN=0,mW=0,mS=0,mT=0;
 function frame(now){
   /* 120 Hz phones: render every other refresh (about 60 fps) so each frame has twice the time */

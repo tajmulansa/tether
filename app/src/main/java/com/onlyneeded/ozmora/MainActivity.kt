@@ -118,6 +118,8 @@ class MainActivity : ComponentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideSystemBars()
+        // A call or notification pop-up takes focus without pausing the app: pause the run.
+        else web.evaluateJavascript("window.tetherPause&&window.tetherPause()", null)
     }
 
     override fun onResume() {
