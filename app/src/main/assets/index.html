@@ -104,7 +104,12 @@ button:active{transform:scale(.97)}
 }
 @keyframes drip{0%{transform:scaleY(0)}50%{transform:scaleY(1)}100%{transform:scaleY(1);opacity:0}}
 #home .top,#home .title,#home .bottom{position:relative;z-index:1;width:100%;max-width:440px}
-#home .top{display:flex;justify-content:center;align-items:center}
+#home .top{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px}
+/* zone progress: one tick per level of the zone; lit once cleared, outlined for the one selected */
+.zprog{display:flex;gap:6px}
+.zprog i{display:block;width:22px;height:2px;border-radius:2px;background:rgba(255,255,255,.14);transition:background .4s ease,box-shadow .4s ease}
+.zprog i.on{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+.zprog i.cur:not(.on){background:rgba(255,255,255,.5)}
 .zone-tag{
   display:inline-flex;align-items:center;gap:10px;font-size:10.5px;font-weight:500;
   letter-spacing:.24em;text-transform:uppercase;color:var(--mut);
@@ -326,6 +331,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
   <button class="gear" id="bSet" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
   <div class="top">
     <div class="zone-tag rv" id="homeZone" style="--d:.5s">Zone 1</div>
+    <div class="zprog rv" id="hZprog" style="--d:.55s" aria-label="Zone progress"></div>
   </div>
   <div class="title">
     <h1 class="wm rv" aria-label="Ozmora" style="--d:.15s"><svg class="omark" viewBox="0 0 34 34" aria-hidden="true"><circle class="ring" cx="17" cy="17" r="13"/><circle class="core" cx="17" cy="17" r="2"/><g class="orb"><circle cx="30" cy="17" r="3"/></g></svg><span>zmora</span></h1>
@@ -1302,6 +1308,7 @@ function rescue(){
   return true;
 }
 
+(function(){const b=document.getElementById('zbn');if(b)b.addEventListener('animationend',function(e){if(e.animationName==='zbIn')b.classList.remove('show');});})();
 function hideBanner(){const b=$('zbn');if(b)b.classList.remove('show','bye');}
 function fadeBanner(){const b=$('zbn');if(b&&b.classList.contains('show')){b.classList.remove('show');b.classList.add('bye');}}
 function finishRunStats(){
@@ -1506,7 +1513,9 @@ function renderHome(){
   ensureDay();
   const D=run.def,lv=save.lvl,z=zoneInfo(D.w);
   $('hBest').textContent=curLevel;
-  $('hBestL').textContent=(D.mile?'Milestone':(D.gaunt?'Gauntlet':'Level'))+' · '+D.L+' anchors';
+  $('hBestL').textContent=D.mile?'Milestone':(D.gaunt?'Gauntlet':'Level');
+  let zp='';for(let i=0;i<LPW;i++){const n=D.w*LPW+1+i;zp+='<i class="'+((lv.stars[n]||0)>0?'on ':'')+(n===curLevel?'cur':'')+'"></i>';}
+  $('hZprog').innerHTML=zp;
   $('hStars').innerHTML=starsHTML(lv.stars[curLevel]||0);
   $('hGoals').innerHTML=goalsHTML();
   $('homeZone').textContent=zoneLabel(z);
