@@ -586,7 +586,7 @@ const REVIVE=100;
 const FLY_MAX=560;   /* an orb that flies this far (px) without catching an anchor is lost */
 const MPOOL=[
   {id:'score',max:1,vals:[12,22,35],txt:n=>'Score '+n+' in one run'},
-  {id:'shards',max:0,vals:[15,30,55],txt:n=>'Collect '+n+' shards'},
+  {id:'shards',max:0,vals:[15,30,55],txt:n=>'Collect '+n+' gems'},
   {id:'perfect',max:0,vals:[3,6,10],txt:n=>'Land '+n+' perfect releases'},
   {id:'combo',max:1,vals:[3,5,8],txt:n=>'Reach a x'+n+' combo'},
   {id:'runs',max:0,vals:[3,5,8],txt:n=>'Play '+n+' runs'},
@@ -1461,7 +1461,7 @@ function fillOver(){
   bar.firstChild.style.transition='none';bar.firstChild.style.width='0%';void bar.offsetWidth;bar.firstChild.style.transition='';
   const pct=Math.min(100,run.maxIdx/run.L*100);
   setTimeout(function(){bar.firstChild.style.width=pct+'%';},30);
-  $('ovEarn').innerHTML='<i class="shard"></i>+'+(run.shards+run.bonusPaid)+' shards earned';
+  $('ovEarn').innerHTML='<i class="shard"></i>+'+(run.shards+run.bonusPaid)+' gems earned';
 }
 function showClear(){
   const c=run.clr;
@@ -1469,10 +1469,10 @@ function showClear(){
   $('clScore').textContent='0';countUp($('clScore'),run.score);
   $('clSub').textContent=c.first?'Score':(run.score>c.prevBp?'New best · was '+c.prevBp:'Best '+c.prevBp);
   const g=[[c.f[0],'Level complete'],
-    [c.f[1],run.shardTotal>0?'Collect '+c.need+' of '+run.shardTotal+' shards':'Collect the shards'],
+    [c.f[1],run.shardTotal>0?'Collect '+c.need+' of '+run.shardTotal+' gems':'Collect the gems'],
     [c.f[2],'Land '+c.par+' perfects, no revive']];
   $('clGoals').innerHTML=g.map(function(x){return '<div class="goal'+(x[0]?' ok':'')+'">'+x[1]+'</div>';}).join('');
-  $('clEarn').innerHTML='<i class="shard"></i>+'+c.earned+' shards'+(c.mb?' · milestone +'+c.mb:' earned');
+  $('clEarn').innerHTML='<i class="shard"></i>+'+c.earned+' gems'+(c.mb?' · milestone +'+c.mb:' earned');
   const sb=$('clStars');sb.innerHTML='';
   for(let k=0;k<3;k++){
     const s=document.createElement('i');s.className='star';s.innerHTML=STAR_SVG;sb.appendChild(s);
@@ -1506,7 +1506,7 @@ function tickRevive(dt){
 }
 /* what each of the three stars asks for */
 function goalsHTML(){
-  const g=['Reach the final gate','Collect 40% of the shards','Land '+perfOf(run.def)+' perfect releases, no revive'];
+  const g=['Reach the final gate','Collect 40% of the gems','Land '+perfOf(run.def)+' perfect releases, no revive'];
   return g.map(function(x){return '<div class="goal">'+x+'</div>';}).join('');
 }
 function renderHome(){
@@ -1557,7 +1557,7 @@ function setPause(on){
 }
 function revive(free){
   if(run.revived)return;
-  if(!free&&save.coins<REVIVE){toast('You need '+REVIVE+' shards to revive');sfx.error();vib(30);return;}
+  if(!free&&save.coins<REVIVE){toast('You need '+REVIVE+' gems to revive');sfx.error();vib(30);return;}
   if(!free)save.coins-=REVIVE;
   run.revived=true;
   if(!rescue()){if(!free)save.coins+=REVIVE;run.revived=false;return;}
@@ -1609,7 +1609,7 @@ function shopAct(){
   const it=shopList().filter(function(x){return x.id===shopId;})[0];
   if(!it||save.sel[shopTab]===it.id)return;
   if(!shopOwned(shopTab,it.id)){
-    if(save.coins<it.p){toast('Need '+(it.p-save.coins)+' more shards');sfx.error();vib(30);return;}
+    if(save.coins<it.p){toast('Need '+(it.p-save.coins)+' more gems');sfx.error();vib(30);return;}
     save.coins-=it.p;save.owned[shopTab].push(it.id);sfx.buy();vib(15);shopPop=.5;
   }else sfx.claim();
   save.sel[shopTab]=it.id;persist();hudCoins();shopRender();
