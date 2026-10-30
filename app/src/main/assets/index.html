@@ -206,6 +206,7 @@ button:active{transform:scale(.97)}
 .goals{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin:18px 0 8px}
 .goal{display:flex;align-items:center;gap:12px;font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
 .goal::before{content:"";width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1px currentColor;flex:none}
+.goals.c{align-items:center;margin:16px 0 0}
 .goal.ok{color:var(--gold)}
 .goal.ok::before{background:currentColor;box-shadow:0 0 10px currentColor}
 #clEarn{display:flex;align-items:center;gap:10px;color:var(--gold);font-weight:400;font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin:6px 0 20px;min-height:14px}
@@ -275,13 +276,13 @@ body.lite #fxl{display:none}
 @keyframes fxFlash{0%{opacity:0}10%{opacity:1}28%{opacity:.15}42%{opacity:.7}100%{opacity:0}}
 
 /* zone title card: cinematic, centred, brief */
-#zbn{position:fixed;left:0;right:0;top:max(34%,calc(var(--st) + 178px));text-align:center;pointer-events:none;opacity:0;padding:0 24px}
-#zbn.show{animation:zbIn 2.6s var(--ease) both}
+#zbn{position:fixed;left:0;right:0;bottom:calc(var(--sb) + 15vh);text-align:center;pointer-events:none;opacity:0;padding:0 24px}
+#zbn.show{animation:zbIn 2.2s var(--ease) both}
 #zbn.bye{animation:zbOut .3s ease both}
 @keyframes zbOut{from{opacity:.85}to{opacity:0}}
 #zbn small{display:flex;align-items:center;justify-content:center;gap:16px;font-size:10px;font-weight:600;letter-spacing:.4em;text-transform:uppercase;color:var(--mut)}
 #zbn small::before,#zbn small::after{content:"";width:32px;height:1px;background:currentColor;opacity:.4}
-#zbn b{display:block;margin:14px 0 0;font-size:32px;font-weight:200;letter-spacing:.22em;text-indent:.22em;text-transform:uppercase;color:var(--zc,#fff);text-shadow:0 0 40px var(--zc,#fff)}
+#zbn b{display:block;margin:10px 0 0;font-size:20px;font-weight:200;letter-spacing:.22em;text-indent:.22em;text-transform:uppercase;color:var(--zc,#fff);opacity:.85}
 #zbn span{display:block;font-size:12px;font-weight:300;letter-spacing:.12em;color:var(--tx);opacity:.72}
 #zbn em{display:none;margin-top:18px;font-style:normal;font-size:10.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
 @keyframes zbIn{0%{opacity:0;transform:translateY(12px);letter-spacing:.1em}12%{opacity:1;transform:none}78%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
@@ -336,6 +337,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
       </div>
       <span id="hBestL">Level</span>
       <div class="mstars" id="hStars"></div>
+      <div class="goals c" id="hGoals"></div>
     </div>
   </div>
 </div>
@@ -388,6 +390,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
 <div id="pause" class="screen hide">
   <div class="ovwrap">
     <div class="ovtag">Paused</div>
+    <div class="goals c" id="pGoals"></div>
     <div style="height:18px"></div>
     <div class="acts">
       <button class="btn" id="bResume">Resume</button>
@@ -1258,7 +1261,7 @@ function announceLevel(){
   const b=$('zbn'),t=$('zbT');
   $('zbS').style.display='none';$('zbR').style.display='none';
   if(D.mile){$('zbN').textContent='Level '+D.n;t.textContent='Milestone';t.style.fontSize='';}
-  else{$('zbN').textContent='Zone '+(D.w+1);t.textContent=z.n;t.style.fontSize=z.n.length>12?'24px':(z.n.length>9?'28px':'');}
+  else{$('zbN').textContent='Zone '+(D.w+1);t.textContent=z.n;t.style.fontSize=z.n.length>12?'15px':(z.n.length>9?'17px':'');}
   b.style.setProperty('--zc','hsl('+z.h+',90%,72%)');
   b.classList.remove('show','bye');void b.offsetWidth;b.classList.add('show');
   return true;
@@ -1417,7 +1420,11 @@ window.tetherAdEvent=function(kind,status){
     }
     return;
   }
-  if(kind==='rewarded'&&status==='loadfailed'){if(Ads.want&&revOpen)adFail();return;}
+  if(kind==='rewarded'&&status==='loadfailed'){
+    /* keep trying until the revive timer runs out (it ends the wait itself) */
+    if(Ads.want&&revOpen)setTimeout(function(){if(Ads.want&&revOpen){try{window.AndroidAds.retryRewarded&&window.AndroidAds.retryRewarded();}catch(e){}}},1500);
+    return;
+  }
   Ads.finish(kind,status);
 };
 /* leaving the game-over screen: show an interstitial first when one is due */
@@ -1490,12 +1497,18 @@ function tickRevive(dt){
   $('rvTimer').classList.toggle('low',rvLeft<2.2);
   if(rvLeft<=0){if(Ads.want)adFail();else closeRev();}
 }
+/* what each of the three stars asks for */
+function goalsHTML(){
+  const g=['Reach the final gate','Collect 40% of the shards','Land '+perfOf(run.def)+' perfect releases, no revive'];
+  return g.map(function(x){return '<div class="goal">'+x+'</div>';}).join('');
+}
 function renderHome(){
   ensureDay();
   const D=run.def,lv=save.lvl,z=zoneInfo(D.w);
   $('hBest').textContent=curLevel;
   $('hBestL').textContent=(D.mile?'Milestone':(D.gaunt?'Gauntlet':'Level'))+' · '+D.L+' anchors';
   $('hStars').innerHTML=starsHTML(lv.stars[curLevel]||0);
+  $('hGoals').innerHTML=goalsHTML();
   $('homeZone').textContent=zoneLabel(z);
   $('bLvPrev').classList.toggle('off',curLevel<=1);
   $('bLvNext').classList.toggle('off',curLevel>=lv.max);
@@ -1530,7 +1543,7 @@ function clearHome(){
   curLevel=nextLevelNum();save.lvl.cur=curLevel;persist();showHome();
 }
 function setPause(on){
-  if(on&&state==='play'){state='pause';sfx.pause();$('pause').classList.remove('hide');}
+  if(on&&state==='play'){state='pause';sfx.pause();$('pGoals').innerHTML=goalsHTML();$('pause').classList.remove('hide');}
   else if(!on&&state==='pause'){wake();state='play';sfx.resume();$('pause').classList.add('hide');}
 }
 function revive(free){

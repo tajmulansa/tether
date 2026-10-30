@@ -33,6 +33,7 @@ class AdBridge(
     private val main = Handler(Looper.getMainLooper())
 
     private var started = false
+    private var consentRef: ConsentInformation? = null
     private var service: Messenger? = null
     private var bound = false
     private var rewardedLoaded = false
@@ -58,6 +59,7 @@ class AdBridge(
         if (started) return
         started = true
         val consent = UserMessagingPlatform.getConsentInformation(activity)
+        consentRef = consent
         val params = ConsentRequestParameters.Builder().build()
         consent.requestConsentInfoUpdate(
             activity, params,
@@ -172,7 +174,12 @@ class AdBridge(
         main.post {
             if (rewardedLoaded && !fresh(rewardedLoadedAt)) rewardedLoaded = false
             when {
-                service == null -> notifyGame("rewarded", "loadfailed")
+                service == null -> {
+                    // Not connected (yet): try to connect again; the game keeps waiting until its timer ends.
+                    note("ads process not connected, reconnecting")
+                    bound = false
+                    consentRef?.let { connectIfAllowed(it) }
+                }
                 rewardedLoaded -> notifyGame("rewarded", "ready")
                 else -> send(AdStore.MSG_LOAD_REWARDED)
             }
