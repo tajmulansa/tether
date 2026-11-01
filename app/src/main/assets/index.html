@@ -1059,7 +1059,7 @@ function newRun(soft){
   anchors=[];items=[];wells=[];parts=[];popups=[];rings=[];trail=[];
   MODS=D.mods;MECH=D.prim;AMB=ZONES[D.zi].amb;stormT=3;
   run={level:D.n,def:D,L:D.L,score:0,combo:0,maxIdx:0,chainIdx:0,lastChain:null,started:false,shards:0,shardTotal:0,perfects:0,bestCombo:0,revived:false,counted:false,
-    bonusPaid:0,nb:false,pb:bestNow(),shield:false,surgeT:0,invuln:0,t:0,perfect:false,zone:D.w,streak:0,lastShard:-9,
+    bonusPaid:0,lastPU:-9,lastPT:'',nb:false,pb:bestNow(),shield:false,surgeT:0,invuln:0,t:0,perfect:false,zone:D.w,streak:0,lastShard:-9,
     cleared:false,vanRun:0,helped:false,pat:{type:'free',left:0,dir:1,ph:0}};
   shake=0;slowT=0;flash=0;time=0;
   const a0={x:FW/2,bx:FW/2,y:0,idx:0,zn:D.w,haz:false,amp:0,ph:0,f:1,van:false,catchR:52,vt:0,gone:false,goal:false};
@@ -1138,10 +1138,12 @@ function spawn(){
   }
   /* power-ups; from level 5 every level also hands out one shield around the middle */
   let pty=null;
-  if(!goal&&i>=5&&rng()<.08)pty=rng()<.5?'shield':'surge';
-  else if(!goal&&!run.helped&&D.n>=5&&i===Math.max(5,Math.floor(D.L*.55)))pty='shield';
+  /* random ones are spread out (at least 8 anchors apart) and never the same kind twice in a row */
+  if(!goal&&i>=5&&i-run.lastPU>=8&&rng()<.14)pty=run.lastPT==='shield'?'surge':(run.lastPT==='surge'?'shield':(rng()<.5?'shield':'surge'));
+  else if(!goal&&!run.helped&&D.n>=5&&i===Math.max(5,Math.floor(D.L*.55))&&i-run.lastPU>=5)pty='shield';
   if(pty){
     if(pty==='shield')run.helped=true;
+    run.lastPU=i;run.lastPT=pty;
     const side=rng()<.5?-1:1,pu={k:'p',type:pty,x:clamp((p.bx+a.bx)/2+side*62,30,FW-30),y:(p.y+a.y)/2,got:0};
     items.push(pu);gapObjs.push(pu);
   }
