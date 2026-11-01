@@ -472,13 +472,24 @@ let curLevel=Math.max(1,Math.min((save.lvl.cur|0)||1,(save.lvl.max|0)||1));
 
 /* ---------- content tables ---------- */
 /* The voyage: eight themed worlds (LPW levels each), then it loops with every earlier challenge mixed back in. Every world introduces one new challenge (m) and its own atmosphere (amb). */
-const LPW=5;   /* levels per world; the last level of a world is its gauntlet */
+/* Zones get longer as the voyage goes on: 8 levels at first, then 9, 10, 11 and up to 12. The last level of a zone is its gauntlet. */
+function zLen(w){return Math.min(12,8+(w>>2));}
+function zoneAt(t){let w=0,s=0;for(;;){const L=zLen(w);if(t<s+L)return{w:w,k:t-s,len:L,start:s};s+=L;w++;}}
+/* New circles: one more kind of anchor every 20 levels. Each is introduced on its own level with a title card, then mixes in more and more. */
+const NEWK=[
+  {id:'blink',at:20, n:'Blink',   d:'Catch it only while it glows'},
+  {id:'orbit',at:40, n:'Orbit',   d:'This circle moves in a loop'},
+  {id:'rush', at:60, n:'Rush',    d:'Spins much faster'},
+  {id:'flip', at:80, n:'Flip',    d:'Reverses your swing'},
+  {id:'repel',at:100,n:'Repulsor',d:'Pushes you away'},
+  {id:'tiny', at:120,n:'Tiny',    d:'A much smaller catch ring'},
+  {id:'ghost',at:140,n:'Ghost',   d:'Fades from sight until you are close'}];
 const MECHS=['drift','crumble','well','wind','pulse','dark','horizon'];   /* the challenge introduced by worlds 2..8, in order */
 function levelSeed(n){return ((Math.imul(n,2654435761)^0x9e3779b9)>>>0);}
 /* Everything about a level comes from its number alone, so a level is the same every time it is played (learn it, master it, chase the stars)
    and difficulty only ever depends on how far the player has come. */
 function levelDef(n){
-  const t=n-1,w=Math.floor(t/LPW),k=t%LPW,gaunt=(k===LPW-1),mile=(n%10===0);
+  const t=n-1,za=zoneAt(t),w=za.w,k=za.k,gaunt=(k===za.len-1),mile=(n%10===0);
   const zi=w%ZONES.length,loop=Math.floor(w/ZONES.length),prim=ZONES[zi].m;
   const r=mulberry32(n*7919+13);
   const mods={};
@@ -496,7 +507,11 @@ function levelDef(n){
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));const q=pool[i];pool[i]=pool[j];pool[j]=q;}
   for(let i=0;i<extra;i++){const m=pool[i];mods[m]=(m==='dark'||m==='wind')?.35+r()*.15:.4+r()*.2;}
   return {n:n,t:t,w:w,k:k,gaunt:gaunt,mile:mile,zi:zi,loop:loop,prim:prim,mods:mods,
-    L:Math.min(34,8+Math.floor(t*.5))+(gaunt?3:0)+(mile?3:0),           /* anchors to the gate */
+    len:za.len,zs:za.start,
+    nk:NEWK.filter(function(q){return q.id!=='repel'&&n>=q.at;}).map(function(q){return {id:q.id,p:clamp(.07+(n-q.at)*.004,.07,.2)+(ZONES[zi].nk===q.id?.12:0)};}),
+    intro:(NEWK.find(function(q){return q.at===n;})||{}).id||'',
+    repelP:n>=100?clamp(.1+(n-100)*.003,.1,.3)+(ZONES[zi].nk==='repel'?.1:0):0,
+    L:Math.min(40,8+Math.floor(t*.5))+(gaunt?3:0)+(mile?3:0),           /* anchors to the gate */
     gap:Math.min(236,122+t*2.6),                             /* average vertical distance between anchors */
     spread:Math.min(180,64+t*2.6),                           /* how far sideways the layout may wander */
     ampP:clamp((t-2)*.018,0,.55),                            /* share of anchors that swing */
@@ -559,7 +574,7 @@ function zoneInfo(w){
   return zCache[w]={w:w,n:zoneName(w),h:h,bg:bg,zi:zi,m:ZONES[zi].m,amb:ZONES[zi].amb,t:ZONES[zi].t};
 }
 function zoneLabel(z){return 'Zone '+(z.w+1)+' · '+z.n;}
-function zoneReward(w){return 30+(w%8)*5;}                  /* shards for discovering a zone beyond the first eight */
+function zoneReward(w){return 30+(w%12)*5;}                  /* shards for discovering a zone beyond the first eight */
 function mileBonus(n){return Math.min(250,40+n*2);}          /* first-clear bonus of a milestone level */
 function perfOf(D){return Math.ceil(D.L*.5);}                /* perfect releases needed for the third star */
 function levelTag(D){
@@ -577,8 +592,12 @@ const ZONES=[
   {h:196,m:'wind',   amb:'snow', t:'Cold winds push you sideways'},
   {h:52, m:'pulse',  amb:'star', t:'Hazards pulse with lightning',bg:['hsl(236,42%,6%)','hsl(44,58%,13%)']},
   {h:268,m:'dark',   amb:'none', t:'Light is scarce. Trust the dark'},
-  {h:338,m:'horizon',amb:'star',t:'Everything falls inward'}];
-const ZREW=[0,25,40,60,80,100,130,160];   /* shards for discovering each zone for the first time */
+  {h:338,m:'horizon',amb:'star',t:'Everything falls inward'},
+  {h:180,m:'',nk:'rush', amb:'star', t:'Anchors spin faster than you think'},
+  {h:2,  m:'',nk:'flip', amb:'ember',t:'Some circles turn you around'},
+  {h:214,m:'',nk:'blink',amb:'snow', t:'Beacons flicker in the deep'},
+  {h:28, m:'',nk:'repel',amb:'ember',t:'Repulsors push you off course',bg:['hsl(24,45%,5%)','hsl(12,62%,14%)']}];
+const ZREW=[0,25,40,60,80,100,130,160,170,180,190,200];   /* shards for discovering each zone for the first time */
 const TRAILS=[{id:'neon',n:'Neon',p:0},{id:'fire',n:'Inferno',p:150},{id:'rainbow',n:'Prism',p:400},{id:'stardust',n:'Stardust',p:700},{id:'plasma',n:'Plasma',p:1100}];
 const SKINS=[{id:'pearl',n:'Pearl',p:0},{id:'ember',n:'Ember',p:200},{id:'halo',n:'Halo',p:450},{id:'gem',n:'Gem',p:700},{id:'eclipse',n:'Eclipse',p:1000}];
 const PU={shield:{h:195,t:'Shield'},surge:{h:322,t:'Double score'}};
@@ -1020,6 +1039,14 @@ const stars=[];for(let i=0;i<70;i++)stars.push({fx:Math.random(),fy:Math.random(
 
 function windNow(){return Math.sin(time*.42)*95*(MODS.wind||0);}
 function pulseOn(h){return Math.sin(time*2.4+h.ph)>-.2;}
+function blinkOn(a){return ((time+a.blink)%2.6)<1.7;}
+/* how visible an anchor is: dark zones, blinking circles that are off, and ghost circles far from the orb all fade */
+function anchorVis(a){
+  let v=darkF(a.x,a.y);
+  if(a.blink!==undefined&&!blinkOn(a))v*=.3;
+  if(a.ghost){const dd=Math.hypot(player.x-a.x,player.y-a.y);v*=clamp(1-(dd-110)/130,.08,1);}
+  return v;
+}
 function speed(){return 232+Math.min(run.score,60)*1.2+Math.min(46,((run.level||1)-1)*.8);}
 function bestNow(){return save.lvl.bp[curLevel]||0;}
 function bestIdxNow(){return save.lvl.bi[run.level]||0;}
@@ -1059,7 +1086,7 @@ function newRun(soft){
   anchors=[];items=[];wells=[];parts=[];popups=[];rings=[];trail=[];
   MODS=D.mods;MECH=D.prim;AMB=ZONES[D.zi].amb;stormT=3;
   run={level:D.n,def:D,L:D.L,score:0,combo:0,maxIdx:0,chainIdx:0,lastChain:null,started:false,shards:0,shardTotal:0,perfects:0,bestCombo:0,revived:false,counted:false,
-    bonusPaid:0,lastPU:-9,lastPT:'',nb:false,pb:bestNow(),shield:false,surgeT:0,invuln:0,t:0,perfect:false,zone:D.w,streak:0,lastShard:-9,
+    bonusPaid:0,kRun:0,introDone:false,lastPU:-9,lastPT:'',nb:false,pb:bestNow(),shield:false,surgeT:0,invuln:0,t:0,perfect:false,zone:D.w,streak:0,lastShard:-9,
     cleared:false,vanRun:0,helped:false,pat:{type:'free',left:0,dir:1,ph:0}};
   shake=0;slowT=0;flash=0;time=0;
   const a0={x:FW/2,bx:FW/2,y:0,idx:0,zn:D.w,haz:false,amp:0,ph:0,f:1,van:false,catchR:52,vt:0,gone:false,goal:false};
@@ -1110,7 +1137,7 @@ function spawn(){
   const maxDx=Math.sqrt(Math.max(0,(p.amp?215:300)*(p.amp?215:300)-gap*gap));
   dx=clamp(dx,-maxDx,maxDx);
   const x=clamp(p.bx+dx,50,FW-50);
-  const a={x:x,bx:x,y:p.y-gap,idx:i,zn:run.zone,haz:false,amp:0,ph:rng()*6.28,f:1+rng()*.8,van:false,catchR:goal?58:52,vt:0,gone:false,goal:goal,mile:goal&&D.mile};
+  const a={x:x,bx:x,y:(p.by!==undefined?p.by:p.y)-gap,idx:i,zn:run.zone,haz:false,amp:0,ph:rng()*6.28,f:1+rng()*.8,van:false,catchR:goal?58:52,vt:0,gone:false,goal:goal,mile:goal&&D.mile};
   /* swinging anchors */
   if(!goal&&i>=3){
     let ampP=D.ampP;if(M.drift)ampP=Math.max(ampP,.6*M.drift);
@@ -1124,6 +1151,23 @@ function spawn(){
     if(vanP>0&&run.vanRun<2&&!(a.amp&&D.n<30)&&rng()<vanP)a.van=true;
   }
   run.vanRun=a.van?run.vanRun+1:0;
+  /* the new circles: the introduction level always shows its circle early; otherwise they mix in by chance, never more than two in a row */
+  let nkind='';
+  if(!goal&&i>=2&&!a.amp&&!a.van&&run.kRun<2){
+    if(D.intro&&D.intro!=='repel'&&!run.introDone&&i>=3){nkind=D.intro;run.introDone=true;}
+    else if(D.nk.length){
+      let tot=0;for(const q of D.nk)tot+=q.p;tot=Math.min(.5,tot);
+      let r=rng()*(D.nk.length?1:0);
+      if(r<tot){let c=0;const sc=tot/Math.max(.0001,D.nk.reduce(function(x,q){return x+q.p;},0));for(const q of D.nk){c+=q.p*sc;if(r<c){nkind=q.id;break;}}}
+    }
+  }
+  if(nkind==='blink')a.blink=rng()*6.28;
+  else if(nkind==='orbit'){const R=24+rng()*14;a.orb={r:R,w:(.7+rng()*.5)*(rng()<.5?1:-1),ph:rng()*6.28};a.bx=clamp(a.bx,50+R,FW-50-R);a.by=a.y;}
+  else if(nkind==='rush')a.rush=1;
+  else if(nkind==='flip')a.flip=1;
+  else if(nkind==='tiny')a.catchR=36;
+  else if(nkind==='ghost')a.ghost=1;
+  run.kRun=nkind?run.kRun+1:0;
   anchors.push(a);run.lastChain=a;
 
   const gapObjs=[];
@@ -1153,6 +1197,10 @@ function spawn(){
   if(!goal&&wp>0&&rng()<wp){
     const side=rng()<.5?-1:1;wellSide=side;
     wells.push({x:clamp((p.bx+a.bx)/2+side*(78+rng()*26),60,FW-60),y:(p.y+a.y)/2+(rng()*26-13),r:M.horizon?132:112});
+  }
+  if(!goal&&wellSide===0&&D.repelP>0&&rng()<D.repelP){
+    const side=rng()<.5?-1:1;wellSide=-side;
+    wells.push({x:clamp((p.bx+a.bx)/2+side*(70+rng()*24),56,FW-56),y:(p.y+a.y)/2+(rng()*20-10),r:96,rep:true});
   }
   /* Hazards are placed relative to the flight path and never closer than the safe distance to either anchor,
      so a clean line to the next anchor always exists, and an orb orbiting an anchor can never touch one. */
@@ -1225,7 +1273,7 @@ function release(auto){
 
 function latch(a,d,dx,dy){
   const p=player;
-  const cross=dx*p.vy-dy*p.vx;p.dir=cross>=0?1:-1;
+  const cross=dx*p.vy-dy*p.vx;p.dir=cross>=0?1:-1;if(a.flip)p.dir=-p.dir;
   p.r=clamp(d,32,a.catchR);p.ang=Math.atan2(dy,dx);p.latched=a;a.vt=0;
   if(a.idx>run.maxIdx){
     const n=a.idx-run.maxIdx;
@@ -1265,10 +1313,12 @@ function announceLevel(){
   if(!save.disc[D.w]){save.disc[D.w]=1;rw=D.w<ZREW.length?ZREW[D.w]:zoneReward(D.w);save.coins+=rw;hudCoins();persist();}
   if(rw)setTimeout(function(){sfx.ach();},420);
   /* The title card appears only when it means something (the first level of a zone, or a milestone) and holds just two short lines. */
-  if(D.k!==0&&!D.mile){hideBanner();return false;}
+  const nk=D.intro?NEWK.find(function(q){return q.id===D.intro;}):null;
+  if(D.k!==0&&!D.mile&&!nk){hideBanner();return false;}
   const b=$('zbn'),t=$('zbT');
   $('zbS').style.display='none';$('zbR').style.display='none';
-  if(D.mile){$('zbN').textContent='Level '+D.n;t.textContent='Milestone';t.style.fontSize='';}
+  if(nk){$('zbN').textContent='New circle';t.textContent=nk.n;t.style.fontSize='';$('zbS').textContent=nk.d;$('zbS').style.display='block';}
+  else if(D.mile){$('zbN').textContent='Level '+D.n;t.textContent='Milestone';t.style.fontSize='';}
   else{$('zbN').textContent='Zone '+(D.w+1);t.textContent=z.n;t.style.fontSize=z.n.length>12?'15px':(z.n.length>9?'17px':'');}
   b.style.setProperty('--zc','hsl('+z.h+',90%,72%)');
   b.classList.remove('show','bye');void b.offsetWidth;b.classList.add('show');
@@ -1516,7 +1566,7 @@ function renderHome(){
   const D=run.def,lv=save.lvl,z=zoneInfo(D.w);
   $('hBest').textContent=curLevel;
   $('hBestL').textContent=D.mile?'Milestone':(D.gaunt?'Gauntlet':'Level');
-  let zp='';for(let i=0;i<LPW;i++){const n=D.w*LPW+1+i;zp+='<i class="'+((lv.stars[n]||0)>0?'on ':'')+(n===curLevel?'cur':'')+'"></i>';}
+  let zp='';for(let i=0;i<D.len;i++){const n=D.zs+1+i;zp+='<i class="'+((lv.stars[n]||0)>0?'on ':'')+(n===curLevel?'cur':'')+'"></i>';}
   $('hZprog').innerHTML=zp;
   $('hStars').innerHTML=starsHTML(lv.stars[curLevel]||0);
   $('hGoals').innerHTML=goalsHTML();
@@ -1732,7 +1782,7 @@ document.addEventListener('visibilitychange',function(){
 function update(dt,real){
   time+=dt;
   hue+=((hueT-hue+540)%360-180)*Math.min(1,dt*1.5);
-  for(const a of anchors){if(a.amp&&!a.gone)a.x=a.bx+Math.sin(time*a.f+a.ph)*a.amp;}
+  for(const a of anchors){if(a.gone)continue;if(a.amp)a.x=a.bx+Math.sin(time*a.f+a.ph)*a.amp;else if(a.orb){const g=time*a.orb.w+a.orb.ph;a.x=a.bx+Math.cos(g)*a.orb.r;a.y=a.by+Math.sin(g)*a.orb.r;}}
   const p=player;
   if(state==='over'){overT+=real;tickRevive(real);}
   else if(state==='clear')overT+=real;
@@ -1746,14 +1796,14 @@ function update(dt,real){
   if(state==='play'||state==='home'||state==='clear'){
     if(p.latched){
       const a=p.latched;
-      p.ang+=p.dir*(speed()/p.r)*dt;
+      p.ang+=p.dir*(speed()/p.r)*(a.rush?1.65:1)*dt;
       p.x=a.x+Math.cos(p.ang)*p.r;p.y=a.y+Math.sin(p.ang)*p.r;
       if(state==='play'&&a.van){a.vt+=dt;if(a.vt>1.7)release(true);}
     } else if(state==='play'){
       /* zone forces on the flying orb */
       for(let i=0;i<wells.length;i++){
         const w=wells[i],wx=w.x-p.x,wy=w.y-p.y,d2=wx*wx+wy*wy;
-        if(d2<w.r*w.r&&d2>36){const d=Math.sqrt(d2),k=1-d/w.r;p.vx+=wx/d*k*520*dt;p.vy+=wy/d*k*520*dt;}
+        if(d2<w.r*w.r&&d2>36){const d=Math.sqrt(d2),k=1-d/w.r,f=w.rep?-420:520;p.vx+=wx/d*k*f*dt;p.vy+=wy/d*k*f*dt;}
       }
       if(MODS.wind)p.vx+=windNow()*dt;
       p.x+=p.vx*dt;p.y+=p.vy*dt;p.flightT+=dt;p.flyDist+=Math.hypot(p.vx,p.vy)*dt;
@@ -1774,7 +1824,7 @@ function update(dt,real){
             die('hazard');break;
           }
           if(d<46&&!a.near){a.near=true;slowT=.4;if(save.set.shake)shake=Math.max(shake,5);sfx.near();popups.push({x:a.x,y:a.y-26,t:0,txt:'Close call',sub:'',h:350});}
-        } else if(d<a.catchR&&!(a===p.prev&&p.cool>0)){
+        } else if(d<a.catchR&&!(a===p.prev&&p.cool>0)&&!(a.blink!==undefined&&!blinkOn(a))){
           latch(a,d,dx,dy);break;
         }
       }
@@ -1874,6 +1924,12 @@ const DASH_A=[7,11],DASH_B=[4,9],NODASH=[];
 function drawWells(vTop,vBot){
   for(let i=0;i<wells.length;i++){
     const w=wells[i];if(w.y<vTop-140||w.y>vBot+140)continue;
+    if(w.rep){
+      ctx.save();ctx.translate(w.x,w.y);ctx.strokeStyle='#ff6b4a';ctx.lineWidth=1.6;
+      for(let q=0;q<3;q++){const ph=(time*.9+q/3)%1;ctx.globalAlpha=.55*(1-ph);ctx.beginPath();ctx.arc(0,0,10+ph*(w.r-10),0,6.283);ctx.stroke();}
+      ctx.globalAlpha=.9;ctx.fillStyle='#2a0a06';ctx.beginPath();ctx.arc(0,0,9,0,6.283);ctx.fill();ctx.stroke();ctx.restore();
+      continue;
+    }
     const r=w.r,qc=qh(hue,8);
     ctx.drawImage(getSprite(7,qc),w.x-r,w.y-r,r*2,r*2);
     ctx.save();ctx.translate(w.x,w.y);ctx.strokeStyle='hsl('+qc+',90%,74%)';ctx.lineWidth=1.3;ctx.lineCap='round';
@@ -1916,7 +1972,7 @@ function drawGlows(nAnch,vTop,vBot){
     const a=anchors[i];if(a.gone||a.y<vTop||a.y>vBot)continue;
     if(a.haz){if(a.pulse&&!pulseOn(a))continue;drawGlow(ctx,a.x,a.y,34,350,.7);continue;}
     const pulse=.5+.5*Math.sin(time*3+a.idx*1.7);
-    drawGlow(ctx,a.x,a.y,34+pulse*4+(player.latched===a?8:0),anchorCol(a),.55*darkF(a.x,a.y));
+    drawGlow(ctx,a.x,a.y,34+pulse*4+(player.latched===a?8:0),anchorCol(a),.55*anchorVis(a));
     if(a.goal)drawGlow(ctx,a.x,a.y,100+pulse*10,46,.5*darkF(a.x,a.y));
   }
   if(nAnch>1){
@@ -1969,17 +2025,25 @@ function drawAnchor(a){
     return;
   }
   const col=anchorCol(a),qc=qh(col,8);
-  const lat=player.latched===a,pulse=.5+.5*Math.sin(time*3+a.idx*1.7),df=darkF(a.x,a.y);
+  const lat=player.latched===a,pulse=.5+.5*Math.sin(time*3+a.idx*1.7),df=anchorVis(a);
   if(a.amp){
     ctx.globalAlpha=.12*df;ctx.strokeStyle='hsl('+col+',80%,70%)';ctx.lineWidth=1.2;ctx.setLineDash([2,6]);
     ctx.beginPath();ctx.moveTo(a.bx-a.amp,a.y);ctx.lineTo(a.bx+a.amp,a.y);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
   }
   ctx.save();ctx.translate(a.x,a.y);ctx.rotate(time*.4);ctx.globalAlpha=(.15+.1*pulse+(lat?.2:0))*df;
-  ctx.drawImage(getSprite(2,qc),-56,-56,112,112);ctx.restore();
+  {const rs=Math.min(1,a.catchR/52)*56;ctx.drawImage(getSprite(2,qc),-rs,-rs,rs*2,rs*2);}ctx.restore();
   if(df<1)ctx.globalAlpha=df;
   ctx.drawImage(getSprite(1,qc),a.x-12,a.y-12,24,24);
   if(a.goal)drawGate(a,df);
   ctx.globalAlpha=1;
+  /* markers of the new circles: each has its own colour and shape, drawn over the normal anchor */
+  if(a.orb){ctx.save();ctx.globalAlpha=.28*df;ctx.strokeStyle='#9dffb0';ctx.lineWidth=1.1;ctx.setLineDash([2,5]);ctx.beginPath();ctx.arc(a.bx,a.by,a.orb.r,0,6.283);ctx.stroke();ctx.restore();
+    ctx.save();ctx.globalAlpha=.8*df;ctx.strokeStyle='#9dffb0';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(a.x,a.y,18,0,6.283);ctx.stroke();ctx.restore();}
+  if(a.blink!==undefined){ctx.save();const on=blinkOn(a);ctx.globalAlpha=(on?.9:.35)*Math.max(df,.4);ctx.strokeStyle='#7fe3ff';ctx.lineWidth=on?2:1.2;if(!on)ctx.setLineDash([3,4]);ctx.beginPath();ctx.arc(a.x,a.y,19,0,6.283);ctx.stroke();ctx.restore();}
+  if(a.rush){ctx.save();ctx.globalAlpha=.9*df;ctx.strokeStyle='#ffb347';ctx.lineWidth=2;ctx.lineCap='round';ctx.setLineDash([7,9]);ctx.lineDashOffset=-time*38;ctx.beginPath();ctx.arc(a.x,a.y,21,0,6.283);ctx.stroke();ctx.restore();}
+  if(a.flip){ctx.save();ctx.globalAlpha=.9*df;ctx.strokeStyle='#ff7ae6';ctx.fillStyle='#ff7ae6';ctx.lineWidth=2;ctx.lineCap='round';ctx.translate(a.x,a.y);ctx.rotate(time*.6);
+    for(let q=0;q<2;q++){ctx.beginPath();ctx.arc(0,0,21,.25,2.55);ctx.stroke();const ex=Math.cos(2.55)*21,ey=Math.sin(2.55)*21;ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex+5,ey-2);ctx.lineTo(ex+1,ey-6);ctx.closePath();ctx.fill();ctx.rotate(Math.PI);}ctx.restore();}
+  if(a.catchR<48&&!a.goal){ctx.save();ctx.globalAlpha=.8*df;ctx.strokeStyle='#fff';ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(a.x,a.y,a.catchR*.5,0,6.283);ctx.stroke();ctx.restore();}
   if(a.van){
     /* orange anchors crumble: dashed ring always, urgent flashing once you hold one */
     ctx.save();ctx.strokeStyle='hsl(30,100%,62%)';ctx.lineWidth=1.6;ctx.globalAlpha=.55;ctx.setLineDash([3,5]);
