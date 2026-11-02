@@ -463,8 +463,25 @@ const DEF=()=>({v:2,coins:0,bestAll:0,best:0,bestIdx:0,
   owned:{trail:['neon'],skin:['pearl']},sel:{trail:'neon',skin:'pearl'},
   stats:{runs:0,latches:0,shards:0,perfects:0,bestCombo:0,time:0,powerups:0},ach:{},
   lvl:{cur:1,max:1,stars:{},bp:{},bi:{}},missions:{day:0,list:[]},disc:{0:1},streak:{last:0,n:0},set:{sfx:1,music:1,haptic:1,shake:1,guide:1,fps:0}});
-function merge(t,s){for(const k in s){if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])&&t[k]&&typeof t[k]==='object')merge(t[k],s[k]);else t[k]=s[k];}}
-function loadSave(){const d=DEF();try{const r=JSON.parse(localStorage.getItem('tether_v2')||'null');if(r)merge(d,r);}catch(e){}return d;}
+/* a saved value is only taken when it has the same shape as the default, so a damaged or old save can never break the game */
+function merge(t,s){
+  if(!s||typeof s!=='object')return;
+  for(const k in s){
+    const v=s[k];if(v===null||v===undefined)continue;
+    if(!(k in t)){t[k]=v;continue;}
+    const d=t[k];
+    if(Array.isArray(d)){if(Array.isArray(v))t[k]=v;}
+    else if(d&&typeof d==='object'){if(typeof v==='object'&&!Array.isArray(v))merge(d,v);}
+    else if(typeof d==='number'){if(typeof v==='number'&&isFinite(v))t[k]=v;}
+    else if(typeof v===typeof d)t[k]=v;
+  }
+}
+function loadSave(){
+  const d=DEF();
+  try{const r=JSON.parse(localStorage.getItem('tether_v2')||'null');if(r&&typeof r==='object'&&!Array.isArray(r))merge(d,r);}catch(e){}
+  d.coins=Math.max(0,Math.min(1e9,d.coins|0));d.lvl.cur=Math.max(1,Math.min(1e6,d.lvl.cur|0));d.lvl.max=Math.max(d.lvl.cur,Math.min(1e6,d.lvl.max|0));
+  return d;
+}
 let save=loadSave();
 function persist(){try{localStorage.setItem('tether_v2',JSON.stringify(save));}catch(e){}}
 /* level the player has selected (always between 1 and the highest unlocked level) */
@@ -1169,7 +1186,7 @@ function spawn(){
   else if(nkind==='orbit'){const R=24+rng()*14;a.orb={r:R,w:(.7+rng()*.5)*(rng()<.5?1:-1),ph:rng()*6.28};a.bx=clamp(a.bx,50+R,FW-50-R);a.by=a.y;}
   else if(nkind==='rush')a.rush=1;
   else if(nkind==='flip')a.flip=1;
-  else if(nkind==='tiny')a.catchR=36;
+  else if(nkind==="tiny")a.catchR=40;
   else if(nkind==='ghost')a.ghost=1;
   run.kRun=nkind?run.kRun+1:0;
   anchors.push(a);run.lastChain=a;
@@ -1820,7 +1837,7 @@ function update(dt,real){
   if(state==='play'||state==='home'||state==='clear'){
     if(p.latched){
       const a=p.latched;
-      p.ang+=p.dir*(speed()/p.r)*(a.rush?1.65:1)*dt;
+      p.ang+=p.dir*(speed()/p.r)*(a.rush?1.4:1)*dt;
       p.x=a.x+Math.cos(p.ang)*p.r;p.y=a.y+Math.sin(p.ang)*p.r;
       if(state==='play'&&a.van){a.vt+=dt;if(a.vt>1.7)release(true);}
     } else if(state==='play'){
