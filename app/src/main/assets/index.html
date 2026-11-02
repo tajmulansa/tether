@@ -511,7 +511,7 @@ function levelDef(n){
   const r=mulberry32(n*7919+13);
   const mods={};
   /* the world's own challenge eases in over its five levels */
-  if(prim)mods[prim]=Math.min(1.15,(.6+.1*k)*(1+.08*loop));
+  if(prim)mods[prim]=Math.min(1.15,(.45+.09*k)*(1+.012*w)*(1+.08*loop));
   /* challenges from earlier worlds resurface, gently at first, more often the deeper the player goes */
   const pool=MECHS.filter(function(m){return loop>0||ZONES.findIndex(function(z){return z.m===m;})<w;}).filter(function(m){return m!==prim;});
   let extra=0;
@@ -522,22 +522,23 @@ function levelDef(n){
   if(loop>=2)extra++;
   extra=Math.min(extra,3,pool.length);
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));const q=pool[i];pool[i]=pool[j];pool[j]=q;}
-  for(let i=0;i<extra;i++){const m=pool[i];mods[m]=(m==='dark'||m==='wind')?.35+r()*.15:.4+r()*.2;}
+  const xs=Math.min(.62,.26+.035*w);   /* resurfacing challenges grow with depth instead of arriving at full strength */
+  for(let i=0;i<extra;i++){const m=pool[i];mods[m]=(m==='dark'||m==='wind')?xs-.08+r()*.1:xs+r()*.12;}
   return {n:n,t:t,w:w,k:k,gaunt:gaunt,mile:mile,zi:zi,loop:loop,prim:prim,mods:mods,
     len:za.len,zs:za.start,
     nk:NEWK.filter(function(q){return q.id!=='repel'&&n>=q.at;}).map(function(q){return {id:q.id,p:clamp(.07+(n-q.at)*.004,.07,.2)+(ZONES[zi].nk===q.id?.12:0)};}),
     intro:(NEWK.find(function(q){return q.at===n;})||{}).id||'',
     repelP:n>=100?clamp(.1+(n-100)*.003,.1,.3)+(ZONES[zi].nk==='repel'?.1:0):0,
-    L:Math.min(40,8+Math.floor(t*.5))+(gaunt?3:0)+(mile?3:0),           /* anchors to the gate */
-    gap:Math.min(236,122+t*2.6),                             /* average vertical distance between anchors */
-    spread:Math.min(180,64+t*2.6),                           /* how far sideways the layout may wander */
-    ampP:clamp((t-2)*.018,0,.55),                            /* share of anchors that swing */
-    vanP:clamp((t-9)*.011,0,.32),                            /* share of anchors that crumble */
+    L:Math.min(42,8+Math.floor(t*.4))+(gaunt?3:0)+(mile?3:0),           /* anchors to the gate */
+    gap:120+128*(1-Math.exp(-t/75)),                             /* average vertical distance between anchors */
+    spread:64+116*(1-Math.exp(-t/70)),                           /* how far sideways the layout may wander */
+    ampP:clamp((t-2)*.0075,0,.5),                            /* share of anchors that swing */
+    vanP:clamp((t-9)*.0045,0,.32),                            /* share of anchors that crumble */
     hazFrom:4,
-    hazP:(n<=2?0:clamp(.06+(t-2)*.012,0,.55))+(gaunt&&n>2?.08:0)+(mile?.06:0),  /* chance of a hazard in a gap */
-    pairP:clamp((t-12)*.012,0,.4),                           /* chance of a second hazard, forming a narrow corridor */
-    hazMv:clamp((t-12)*.01,0,.5),                            /* share of hazards that swing */
-    scroll:14+Math.min(40,t*.5)};                            /* how fast the view climbs on its own */
+    hazP:(n<=2?0:clamp(.06+(t-2)*.005,0,.5))+(gaunt&&n>2?.08:0)+(mile?.06:0),  /* chance of a hazard in a gap */
+    pairP:clamp((t-12)*.0035,0,.4),                           /* chance of a second hazard, forming a narrow corridor */
+    hazMv:clamp((t-12)*.0035,0,.5),                            /* share of hazards that swing */
+    scroll:14+Math.min(40,t*.32)};                            /* how fast the view climbs on its own */
 }
 /* ---------- zone identity ----------
    A zone's name and colour are pure functions of its number (fixed seeds and integer maths only), so Zone 9 is the same place on every device.
