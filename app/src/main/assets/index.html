@@ -158,7 +158,7 @@ button:active{transform:scale(.97)}
 #hint{
   grid-column:1/4;align-self:end;justify-self:center;margin-bottom:11vh;text-align:center;max-width:240px;
   font-size:10.5px;font-weight:500;letter-spacing:.22em;text-indent:.22em;text-transform:uppercase;line-height:1.9;color:var(--mut);
-  animation:breathe 2.6s ease-in-out infinite;transition:opacity .3s;
+  text-wrap:balance;animation:breathe 2.6s ease-in-out infinite;transition:opacity .3s;
 }
 #hint::before{content:"";display:block;width:36px;height:36px;margin:0 auto 16px;border-radius:50%;border:1px solid var(--line-hi);animation:ripple 2.6s ease-out infinite}
 @keyframes ripple{0%{transform:scale(.45);opacity:.9}100%{transform:scale(1.4);opacity:0}}
@@ -322,7 +322,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
   <div id="hMid"><div id="hScore">0</div><div id="hZone">Level 1</div><div id="hBar"><i id="hBarFill"></i></div><div id="hTgt" class="hide"></div></div>
   <div class="chip" id="hCoins"><i class="shard"></i><b id="hCoinN">0</b></div>
   <div id="chips"></div>
-  <div id="hint">Tap to release</div>
+  <div id="hint">Tap when the line turns gold</div>
 </div>
 
 <div id="home" class="screen">
@@ -1347,7 +1347,7 @@ function latch(a,d,dx,dy){
   run.perfect=false;
 }
 /* level title card: slides in, holds, fades (CSS only). The first visit to a world also pays its discovery reward. */
-function announceLevel(){
+function announceLevel(quiet){
   const D=run.def,z=zoneInfo(D.w);
   mEvent('zone',D.w+1);
   let rw=0;
@@ -1355,7 +1355,7 @@ function announceLevel(){
   if(rw)setTimeout(function(){sfx.ach();},420);
   /* The title card appears only when it means something (the first level of a zone, or a milestone) and holds just two short lines. */
   const nk=D.intro?NEWK.find(function(q){return q.id===D.intro;}):null;
-  if(D.k!==0&&!D.mile&&!nk){hideBanner();return false;}
+  if(quiet||(D.k!==0&&!D.mile&&!nk)){hideBanner();return false;}
   const b=$('zbn'),t=$('zbT');
   $('zbS').style.display='none';$('zbR').style.display='none';
   if(nk){$('zbN').textContent='New circle';t.textContent=nk.n;t.style.fontSize='';$('zbS').textContent=nk.d;$('zbS').style.display='block';}
@@ -1618,15 +1618,16 @@ function renderHome(){
   hudCoins();
 }
 function showHome(){
-  state='home';ensureDay();newRun();hideBanner();
+  state='home';lastStartLv=0;ensureDay();newRun();hideBanner();
   revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');$('home').classList.remove('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.add('hide');
   renderHome();
 }
+let lastStartLv=0;   /* retrying the same level skips the title card, so "one more try" is instant */
 function startPlay(){
   ensureDay();newRun();state='play';
   revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');$('home').classList.add('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.remove('hide');
   lastChips='';$('chips').innerHTML='';
-  const wantHint=save.stats.runs<2&&run.level===1,card=announceLevel();
+  const wantHint=save.stats.latches<10&&run.level===1,again=run.level===lastStartLv,card=announceLevel(again);lastStartLv=run.level;
   $('hint').classList.toggle('hide',!wantHint||card);
   if(wantHint&&card)setTimeout(function(){if(state==='play'&&!run.started)$('hint').classList.remove('hide');},2400);
 }
@@ -1792,7 +1793,7 @@ $('bLvNext').onclick=function(){lvStep(1);};
 $('bNext').onclick=goNext;
 $('bReplay').onclick=function(){if(state==='clear'&&overT>.5)leaveOver(function(){sfx.start();startPlay();});};
 $('bClHome').onclick=function(){if(state==='clear')leaveOver(clearHome);};
-$('over').addEventListener('click',function(e){if(e.target===$('over')&&!revOpen&&overT>.4)leaveOver(startPlay);});
+$('over').addEventListener('click',function(e){if(e.target===$('over')&&!revOpen&&overT>.25)leaveOver(startPlay);});
 
 addEventListener('pointerdown',function(e){
   if(e.target!==cv)return;
@@ -1805,7 +1806,7 @@ addEventListener('keydown',function(e){
     if(e.code==='Space'||e.code==='Enter'){
     e.preventDefault();initAudio();
     if(state==='play'&&player.latched)release(false);
-    else if(state==='over'&&!revOpen&&overT>.4)leaveOver(startPlay);
+    else if(state==='over'&&!revOpen&&overT>.25)leaveOver(startPlay);
     else if(state==='clear')goNext();
       else if(state==='home')startPlay();
   } else if(state==='home'&&(e.code==='ArrowLeft'||e.code==='ArrowRight')){

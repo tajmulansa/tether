@@ -20,14 +20,14 @@ fun envOr(name: String, fallback: String): String =
 
 android {
     namespace = "com.onlyneeded.ozmora"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
-        targetSdk = 35
-        versionCode = 32
-        versionName = "3.3"
+        targetSdk = 36
+        versionCode = 33
+        versionName = "3.4"
     }
 
     if (keystorePath != null) {
