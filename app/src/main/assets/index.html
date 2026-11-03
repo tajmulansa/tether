@@ -174,29 +174,21 @@ button:active{transform:scale(.97)}
 #pause .ovwrap{gap:12px}
 .ovtag{font-size:10.5px;font-weight:600;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:14px}
 .ovtag.gold{color:var(--gold);text-shadow:0 0 22px rgba(255,209,102,.5)}
-/* THE ENDING: a celebration sweep through all 16 zones, then the thank-you screen */
-#vic{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(circle at 50% 46%,rgba(5,6,15,.35),rgba(5,6,15,.78));transition:opacity .8s ease;cursor:pointer}
-#vic.hide{display:none}#vic.out{opacity:0;pointer-events:none}
-#vicFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#vic .ve{position:relative;font-size:10.5px;font-weight:600;letter-spacing:.5em;text-indent:.5em;text-transform:uppercase;color:var(--gold);opacity:0;animation:vicIn 1s ease .2s forwards}
-#vic .vn{position:relative;font-size:clamp(96px,30vw,168px);font-weight:200;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:10px 0 6px;color:#fff;text-shadow:0 0 38px rgba(255,209,102,.35)}
-#vic .vl{position:relative;font-size:11px;font-weight:500;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:var(--mut)}
-#vic .vz{position:relative;margin-top:22px;font-size:15px;font-weight:300;letter-spacing:.22em;text-indent:.22em;text-transform:uppercase;min-height:22px}
-#vic.done .vn{animation:vicPop .9s var(--ease)}
-@keyframes vicIn{to{opacity:1}}
-@keyframes vicPop{0%{transform:scale(1)}35%{transform:scale(1.12)}100%{transform:scale(1)}}
-#fin{position:fixed;inset:0;z-index:50;background:#05060f;color:var(--tx);overflow:hidden;opacity:1}
+/* THE ENDING: the game itself dissolves into a thank-you screen tinted with the last zone's colour */
+#fin{--fh:322;position:fixed;inset:0;z-index:50;color:var(--tx);overflow:hidden}
 #fin.hide{display:none}
-#fin .sky{position:absolute;inset:0;background:radial-gradient(circle at 22% 14%,rgba(70,76,200,.26),transparent 58%),radial-gradient(circle at 78% 54%,rgba(130,60,190,.22),transparent 62%),radial-gradient(circle at 30% 94%,rgba(40,90,180,.2),transparent 66%),linear-gradient(180deg,#05060f,#10122a)}
+#fin .sky{position:absolute;inset:0;opacity:0;transition:opacity 3s ease;background:radial-gradient(circle at 22% 14%,hsla(var(--fh),75%,52%,.24),transparent 58%),radial-gradient(circle at 78% 54%,hsla(calc(var(--fh) - 46),70%,46%,.2),transparent 62%),radial-gradient(circle at 30% 94%,hsla(calc(var(--fh) + 40),70%,46%,.18),transparent 66%),linear-gradient(180deg,rgba(5,3,10,.95),rgba(18,6,20,.97))}
+#fin.in .sky{opacity:1}
 #finFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #fin .stage{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:max(28px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left))}
 #fin .emblem{position:relative;width:clamp(120px,30vh,176px);aspect-ratio:1;margin-bottom:clamp(26px,5.5vh,48px)}
 #fin .emblem svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-#fin .r1{fill:none;stroke:rgba(255,255,255,.22);stroke-width:1;stroke-dasharray:2 7;stroke-linecap:round;opacity:.9}
+#fin .r1{fill:none;stroke:var(--line-hi);stroke-width:1;stroke-dasharray:2 7;stroke-linecap:round;opacity:.9}
 #fin .r2{fill:none;stroke:rgba(255,255,255,.09);stroke-width:1}
 #fin .glow{fill:url(#fcg)}#fin .core{fill:#f4f6ff}
 #fin .spin{transform-origin:100px 100px;animation:finSpin 9s linear infinite}
-#fin .orb{fill:hsl(232,90%,72%);filter:drop-shadow(0 0 7px hsl(232,90%,72%)) drop-shadow(0 0 16px hsl(232,90%,72%))}
+#fin .orb{fill:hsl(var(--fh),90%,74%);filter:drop-shadow(0 0 7px hsl(var(--fh),90%,74%)) drop-shadow(0 0 16px hsl(var(--fh),90%,74%))}
+#fin .gs0{stop-color:hsl(var(--fh),90%,74%)}#fin .gs1{stop-color:hsl(calc(var(--fh) + 30),90%,82%)}
 #fin .tail{fill:none;stroke:url(#ftg);stroke-width:3;stroke-linecap:round}
 @keyframes finSpin{to{transform:rotate(360deg)}}
 #fin .eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.5em;text-indent:.5em;text-transform:uppercase;color:var(--gold);margin-bottom:clamp(14px,2.4vh,20px)}
@@ -205,7 +197,8 @@ button:active{transform:scale(.97)}
 #fin .msg{margin:0;max-width:30ch;font-size:clamp(14.5px,4vw,17px);font-weight:300;line-height:1.75;letter-spacing:.015em;color:rgba(244,246,255,.56);text-wrap:balance}
 #fin .msg+.msg{margin-top:.9em}#fin .msg em{font-style:normal;color:#f4f6ff;font-weight:400}
 #fin .sign{margin:clamp(26px,5vh,44px) 0 0;font-size:10.5px;font-weight:600;letter-spacing:.4em;text-indent:.4em;text-transform:uppercase;color:rgba(244,246,255,.32)}
-#fin .fhome{margin-top:clamp(18px,3vh,28px);font-size:10.5px;font-weight:600;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:rgba(244,246,255,.5);padding:12px 18px;border:1px solid rgba(255,255,255,.14);border-radius:99px}
+#fin .fhome{pointer-events:auto;margin-top:clamp(18px,3vh,28px);height:48px;padding:0 30px;border-radius:24px;font-size:11px;font-weight:600;letter-spacing:.28em;text-indent:.28em;text-transform:uppercase;color:var(--tx);box-shadow:inset 0 0 0 1px var(--line-hi)}
+#fin .fhome:hover{background:var(--surface-hi)}
 #fin .wm{position:absolute;left:0;right:0;bottom:max(26px,env(safe-area-inset-bottom));display:flex;justify-content:center;align-items:baseline;font-size:13px;font-weight:300;letter-spacing:.6em;line-height:1;text-transform:uppercase;color:rgba(244,246,255,.32);pointer-events:none}
 #fin .wm .o{display:inline-block;width:.76em;height:.76em;margin-right:.6em;overflow:visible;opacity:.9}
 #fin .wm .o circle{fill:none;stroke:currentColor;stroke-width:7}#fin .wm .t{margin-right:-.6em}
@@ -420,33 +413,25 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
   </div>
 </div>
 
-<div id="vic" class="hide" aria-hidden="true">
-  <canvas id="vicFx"></canvas>
-  <div class="ve" id="vicE">Your journey</div>
-  <div class="vn" id="vicN">0</div>
-  <div class="vl" id="vicL">levels</div>
-  <div class="vz" id="vicZ"></div>
-</div>
-
 <div id="fin" class="hide">
   <div class="sky"></div><canvas id="finFx" aria-hidden="true"></canvas>
   <main class="stage">
-    <div class="emblem rv" style="--d:.1" aria-hidden="true">
+    <div class="emblem rv" style="--d:1.5" aria-hidden="true">
       <svg viewBox="0 0 200 200"><defs>
-        <radialGradient id="fcg"><stop offset="0" stop-color="hsl(232,90%,72%)" stop-opacity=".55"/><stop offset="1" stop-color="hsl(232,90%,72%)" stop-opacity="0"/></radialGradient>
-        <linearGradient id="ftg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="hsl(232,90%,72%)" stop-opacity="0"/><stop offset="1" stop-color="hsl(262,90%,80%)" stop-opacity=".95"/></linearGradient></defs>
+        <radialGradient id="fcg"><stop class="gs0" offset="0" stop-opacity=".55"/><stop class="gs0" offset="1" stop-opacity="0"/></radialGradient>
+        <linearGradient id="ftg" x1="0" y1="0" x2="1" y2="0"><stop class="gs0" offset="0" stop-opacity="0"/><stop class="gs1" offset="1" stop-opacity=".95"/></linearGradient></defs>
         <circle class="glow" cx="100" cy="100" r="64"/><circle class="r2" cx="100" cy="100" r="96"/><circle class="r1" cx="100" cy="100" r="62"/><circle class="core" cx="100" cy="100" r="5"/>
         <g class="spin"><path class="tail" d="M 100 38 A 62 62 0 0 0 38.4 92.4" transform="rotate(90 100 100)"/><circle class="orb" cx="162" cy="100" r="7"/></g>
       </svg>
     </div>
-    <p class="eyebrow rv" style="--d:.5">The end</p>
-    <h1 class="rv" style="--d:.75">Thank you</h1>
-    <div class="rule rv" style="--d:1.05"></div>
-    <p class="msg rv" style="--d:1.25">Every tap, every orbit, every near miss gave this little universe its <em>pulse</em>.</p>
-    <p class="msg rv" style="--d:1.55">Wherever your next orbit takes you, may it be a beautiful one.</p>
-    <p class="sign rv" style="--d:2">With gratitude</p>
-    <button class="fhome rv" id="bFinHome" style="--d:3">Back to home</button>
-    <div class="wm rv" style="--d:2.4" role="img" aria-label="Ozmora"><svg class="o" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="47"/></svg><span class="t">zmora</span></div>
+    <p class="eyebrow rv" style="--d:1.9">The end</p>
+    <h1 class="rv" style="--d:2.15">Thank you</h1>
+    <div class="rule rv" style="--d:2.45"></div>
+    <p class="msg rv" style="--d:2.65">Every tap, every orbit, every near miss gave this little universe its <em>pulse</em>.</p>
+    <p class="msg rv" style="--d:2.95">Wherever your next orbit takes you, may it be a beautiful one.</p>
+    <p class="sign rv" style="--d:3.4">With gratitude</p>
+    <button class="fhome rv" id="bFinHome" style="--d:4.4">Back to home</button>
+    <div class="wm rv" style="--d:3.8" role="img" aria-label="Ozmora"><svg class="o" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="47"/></svg><span class="t">zmora</span></div>
   </main>
 </div>
 
@@ -725,7 +710,7 @@ function toast(t){
    Graph: sfx/music buses -> master -> compressor -> output, with one shared reverb and one shared echo.
    Kept deliberately light: short mono reverb, shared send buses, few nodes per sound, rate-limited rapid sounds. */
 let AC=null,master=null,outN=null,SB=null,wetBus=null,MB=null,MG=null,padBus=null,mFilter=null,verbSend=null,delaySend=null,mVerb=null,mEcho=null,noiseBuf=null;
-let aVoices=0,mTimer=null,mNext=0,mStep=0,mOn=false,mZone=0,mSlow=0,lastShardT=0;
+let mEnd=false,aVoices=0,mTimer=null,mNext=0,mStep=0,mOn=false,mZone=0,mSlow=0,lastShardT=0;
 const BPM=96,STEP=60/BPM/4,MUSIC_VOL=.7;
 /* One key and chord loop per zone. pent = the scale used for melodies and for the SFX pitches,
    so sound effects always sit in the same key as the music. */
@@ -739,6 +724,7 @@ const MZ=[
   {root:43,pent:[0,3,5,7,10],prog:[[0,'m7'],[-2,'M7'],[-4,'M7'],[-5,'m7']]}, /* The Hollow G minor */
   {root:47,pent:[0,3,5,7,10],prog:[[0,'m7'],[-3,'M7'],[-5,'M'],[2,'m7']]}    /* Event Horizon B minor */
 ];
+const MEND={root:50,pent:[0,2,4,7,9],prog:[[0,'M7'],[7,'M'],[9,'m7'],[5,'M7']]};   /* the goodbye: D major, warm and open */
 const CHORD={m7:[0,3,7,10],M7:[0,4,7,11],M:[0,4,7,12]};
 function mtof(m){return 440*Math.pow(2,(m-69)/12);}
 
@@ -979,6 +965,7 @@ function mIntensity(){
 }
 function mControl(t,inten){
   let cut=7000+inten*1400,lvl=1;
+  if(mEnd){mFilter.frequency.setTargetAtTime(2300,t,1.2);MB.gain.setTargetAtTime(1,t,.8);mVerb.gain.setTargetAtTime(.75,t,.8);mEcho.gain.setTargetAtTime(.6,t,.8);return;}
   if(state==='home'){cut=2600;lvl=.9;}
   else if(state==='pause'){cut=650;lvl=.55;}
   else if(state==='over'){cut=900;lvl=.7;}
@@ -1007,13 +994,13 @@ function mPluck(m,t,vol){
 function mStepAt(step,t){
   const pos=step%32,p=step%16;
   if(pos===0)mZone=((state==='home')?0:(run.zone||0))%MZ.length;
-  const Z=MZ[mZone],pr=Z.prog[Math.floor(step/32)%4],rootM=Z.root+pr[0],ch=CHORD[pr[1]];
-  const inten=mIntensity();
+  const Z=mEnd?MEND:MZ[mZone],pr=Z.prog[Math.floor(step/32)%4],rootM=Z.root+pr[0],ch=CHORD[pr[1]];
+  const inten=mEnd?0:mIntensity();
   if(step%4===0)mControl(t,inten);
 
   /* pad: one chord every two bars; the four notes start on consecutive steps so the work is spread out */
   if(pos<4){
-    const dur=(32-pos)*STEP+1.4,v=.03;
+    const dur=(32-pos)*STEP+1.4,v=mEnd?.042:.03;
     if(pos===0)padNote(rootM,t,dur,v);
     else padNote(rootM+12+ch[pos],t,dur,v*.85);
   }
@@ -1033,7 +1020,11 @@ function mStepAt(step,t){
   const tones=[];
   for(let k=0;k<4;k++)tones.push(rootM+12+ch[k]);
   for(let k=0;k<4;k++)tones.push(rootM+24+ch[k]);
-  if(inten===0){
+  if(mEnd){
+    /* slow bells that drift down the chord, a long breath between them */
+    if(step%4===0){const k=7-((step>>2)%8);voice('sine',mtof(tones[k]),t,2.6,.055,{a:.01,bus:MB,verb:1,dly:1});}
+    if(p===0)voice('sine',mtof(rootM),t,3.2,.16,{a:.05,bus:padBus});
+  } else if(inten===0){
     if(p===0&&Math.random()<.55){
       const m=tones[4+Math.floor(Math.random()*4)]+12*(Math.random()<.3?1:0);
       voice('sine',mtof(m),t,1.7,.05,{a:.01,bus:MB,verb:1,dly:1});
@@ -1552,57 +1543,14 @@ function levelClear(a){
   $('hud').classList.add('hide');
   setTimeout(function(){if(state==='clear'){if(n>=MAXLV)showFinale();else showClear();}},650);
 }
-/* the ending: a sweep through every zone with fireworks in each zone's colour, then the thank-you screen */
-const VIC={on:false,t0:0,ps:[],zi:-1,lv:0,fin:false,raf:0,g:null,W:0,H:0,dpr:1,ended:false};
-function vicBurst(x,y,h,n){
-  for(let i=0;i<n;i++){const a=Math.random()*6.283,v=60+Math.random()*230;VIC.ps.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:1,d:.55+Math.random()*.7,h:h+(Math.random()*30-15)});}
-  if(VIC.ps.length>520)VIC.ps.splice(0,VIC.ps.length-520);
-}
+/* the ending: no fanfare. The music softens into a goodbye and the game itself dissolves into the thank-you screen */
 function showFinale(){
-  const cv=$('vicFx');VIC.dpr=Math.min(2,window.devicePixelRatio||1);VIC.W=innerWidth;VIC.H=innerHeight;
-  cv.width=Math.round(VIC.W*VIC.dpr);cv.height=Math.round(VIC.H*VIC.dpr);VIC.g=cv.getContext('2d');
-  VIC.on=true;VIC.t0=performance.now();VIC.ps=[];VIC.zi=-1;VIC.lv=0;VIC.fin=false;VIC.ended=false;VIC.last=VIC.t0;
-  $('clr').classList.add('hide');$('vic').classList.remove('hide','out','done');
-  $('vicN').textContent='0';$('vicE').textContent='Your journey';$('vicL').textContent='levels';$('vicZ').textContent='';
-  sfx.zone();VIC.raf=requestAnimationFrame(vicFrame);
+  const h=zoneInfo(zoneAt(MAXLV-1).w).h;$('fin').style.setProperty('--fh',h);
+  mEnd=true;mStep=(Math.floor(mStep/32)+1)*32;
+  $('fin').classList.remove('hide','in');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){$('fin').classList.add('in');});});
+  finStarsStart();
 }
-function vicFrame(now){
-  if(!VIC.on)return;
-  const t=(now-VIC.t0)/1000,dt=Math.min(.05,(now-VIC.last)/1000);VIC.last=now;
-  const DUR=5,k=Math.max(0,Math.min(1,(t-.7)/DUR)),e=1-Math.pow(1-k,2.2);
-  const lv=Math.min(MAXLV,Math.round(e*MAXLV));
-  if(lv!==VIC.lv){
-    VIC.lv=lv;$('vicN').textContent=lv;
-    const w=zoneAt(Math.max(0,lv-1)).w;
-    if(w!==VIC.zi){VIC.zi=w;const z=zoneInfo(w);
-      $('vicZ').textContent='Zone '+(w+1)+' · '+z.n;$('vicZ').style.color='hsl('+z.h+',90%,72%)';
-      for(let b=0;b<2;b++)vicBurst(VIC.W*(.2+Math.random()*.6),VIC.H*(.14+Math.random()*.36),z.h,48);
-      try{sfx.perfect();}catch(e){}
-    }
-  }
-  if(!VIC.fin&&lv>=MAXLV&&k>=1){
-    VIC.fin=true;VIC.tf=t;$('vic').classList.add('done');$('vicE').textContent='Complete';$('vicL').textContent='levels · 16 zones';$('vicZ').textContent='';
-    for(let b=0;b<7;b++)setTimeout(function(){vicBurst(VIC.W*(.15+Math.random()*.7),VIC.H*(.12+Math.random()*.4),[46,320,190,262,12,150,232][b],70);try{sfx.perfect();}catch(e){}},b*190);
-    try{sfx.ach();}catch(e){}
-  }
-  /* draw */
-  const g=VIC.g;g.setTransform(VIC.dpr,0,0,VIC.dpr,0,0);g.clearRect(0,0,VIC.W,VIC.H);g.globalCompositeOperation='lighter';
-  for(let i=VIC.ps.length-1;i>=0;i--){
-    const q=VIC.ps[i];q.l-=dt/q.d;if(q.l<=0){VIC.ps.splice(i,1);continue;}
-    q.vy+=150*dt;q.vx*=.985;q.x+=q.vx*dt;q.y+=q.vy*dt;
-    g.globalAlpha=Math.min(1,q.l*1.4);g.fillStyle='hsl('+q.h+',100%,'+(60+q.l*18)+'%)';
-    g.beginPath();g.arc(q.x,q.y,1.2+q.l*2,0,6.283);g.fill();
-  }
-  g.globalCompositeOperation='source-over';g.globalAlpha=1;
-  if(VIC.fin&&t-VIC.tf>2.6){endVictory();return;}
-  VIC.raf=requestAnimationFrame(vicFrame);
-}
-function endVictory(){
-  if(VIC.ended)return;VIC.ended=true;VIC.on=false;cancelAnimationFrame(VIC.raf);
-  $('fin').classList.remove('hide');finStarsStart();
-  $('vic').classList.add('out');setTimeout(function(){$('vic').classList.add('hide');},850);
-}
-$('vic').addEventListener('click',function(){if(VIC.on&&performance.now()-VIC.t0>1500)endVictory();});
 /* drifting stars behind the thank-you text (runs only while it is shown) */
 const FIN={on:false,stars:[],g:null,W:0,H:0,dpr:1};
 function finStarsStart(){
@@ -1619,8 +1567,7 @@ function finStarsFrame(now){
   g.globalAlpha=1;requestAnimationFrame(finStarsFrame);
 }
 function hideEnding(){
-  VIC.on=false;cancelAnimationFrame(VIC.raf);FIN.on=false;
-  $('vic').classList.add('hide');$('vic').classList.remove('out','done');$('fin').classList.add('hide');
+  mEnd=false;FIN.on=false;$('fin').classList.add('hide');$('fin').classList.remove('in');
 }
 
 /* ---------- HUD + screens ---------- */
