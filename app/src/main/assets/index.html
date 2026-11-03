@@ -174,6 +174,10 @@ button:active{transform:scale(.97)}
 #pause .ovwrap{gap:12px}
 .ovtag{font-size:10.5px;font-weight:600;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:14px}
 .ovtag.gold{color:var(--gold);text-shadow:0 0 22px rgba(255,209,102,.5)}
+#finTitle{font-size:34px;font-weight:300;line-height:1.15;text-align:center;letter-spacing:-.01em;margin-top:8px}
+#finMsg,#finSub{margin:0;text-align:center;font-size:13.5px;line-height:1.6;color:var(--mut);max-width:290px}
+#finStars{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;margin:6px 0 4px;color:var(--gold)}
+#finStars svg{width:18px;height:18px}
 #rvScore,#ovScore{font-size:120px;font-weight:200;line-height:.95;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin-top:6px}
 #rvScore{font-size:88px}
 #ovBest,.rvsub{color:var(--mut);font-size:10.5px;font-weight:500;letter-spacing:.24em;text-indent:.24em;text-transform:uppercase;margin-top:4px}
@@ -223,6 +227,11 @@ button:active{transform:scale(.97)}
 .srows{display:flex;flex-direction:column;width:100%;margin:14px 0 18px}
 .srow{display:flex;align-items:center;justify-content:space-between;width:100%;padding:15px 4px;border-bottom:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);text-align:left;pointer-events:auto}
 .srow.on{color:var(--tx)}
+.sact{display:flex;align-items:center;justify-content:space-between;width:100%;padding:15px 4px;border-bottom:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);text-align:left;pointer-events:auto}
+.sact[hidden]{display:none}
+.sact b{font-weight:600;letter-spacing:.08em;color:var(--gold)}
+.sact.done{color:var(--tx);pointer-events:none}
+.sact.done b{color:var(--mut)}
 .sw{position:relative;width:38px;height:20px;border-radius:10px;background:rgba(255,255,255,.12);flex:none;transition:background .25s ease}
 .sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;opacity:.7;transition:transform .3s var(--ease),opacity .25s}
 .srow.on .sw{background:var(--acc)}
@@ -357,7 +366,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
     <div id="ovEarn"></div>
     <div class="acts">
       <button class="btn" id="bRetry">Retry level</button>
-      <button class="link" id="bHome">Home</button>
+      <div class="links"><button class="link" id="bHome">Home</button><i class="sep" id="ovSep" hidden></i><button class="link" id="bOvNoAds" hidden>Remove ads</button></div>
     </div>
   </div>
 </div>
@@ -374,6 +383,17 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
       <button class="btn" id="bNext">Next level</button>
       <div class="links"><button class="link" id="bReplay">Replay</button><i class="sep"></i><button class="link" id="bClHome">Home</button></div>
     </div>
+  </div>
+</div>
+
+<div id="fin" class="screen hide">
+  <div class="ovwrap">
+    <div class="ovtag gold">You reached the end</div>
+    <div id="finTitle">Thank you for playing</div>
+    <p id="finMsg">You crossed all 16 zones and 140 levels. Every orbit you caught, you earned.</p>
+    <div id="finStars"></div>
+    <p id="finSub">Ozmora was made with care for players like you. Go back to any level and chase the stars you missed.</p>
+    <div class="acts"><button class="btn" id="bFinHome">Back to home</button></div>
   </div>
 </div>
 
@@ -411,10 +431,12 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
     <div class="srows">
       <button class="srow" data-k="sfx" role="switch"><span>Sound effects</span><i class="sw"></i></button>
       <button class="srow" data-k="music" role="switch"><span>Music</span><i class="sw"></i></button>
-      <button class="srow" data-k="haptic" role="switch"><span>Vibration</span><i class="sw"></i></button>
       <button class="srow" data-k="shake" role="switch"><span>Screen shake</span><i class="sw"></i></button>
       <button class="srow" data-k="guide" role="switch"><span>Aim guide</span><i class="sw"></i></button>
-      <button class="srow" data-k="fps" role="switch"><span>Performance meter</span><i class="sw"></i></button>
+      <button class="sact" id="sNoAds" hidden><span>Remove ads</span><b id="sNoAdsV"></b></button>
+      <button class="sact" id="sRestore" hidden><span>Restore purchase</span></button>
+      <button class="sact" id="sPriv" hidden><span>Privacy &amp; ad choices</span></button>
+      <button class="sact" id="sPol" hidden><span>Privacy policy</span></button>
     </div>
     <div class="acts"><button class="btn" id="bSetDone">Done</button></div>
   </div>
@@ -458,6 +480,7 @@ function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a
 function fmtTime(s){s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+'h '+m+'m':m+'m '+(s%60)+'s';}
 function resetIn(){const n=new Date(),m=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1);const s=Math.floor((m-n)/1000);return Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m';}
 
+const MAXLV=140;   /* the game ends here: 16 zones, 140 levels */
 /* ---------- save data ---------- */
 const DEF=()=>({v:2,coins:0,bestAll:0,best:0,bestIdx:0,
   owned:{trail:['neon'],skin:['pearl']},sel:{trail:'neon',skin:'pearl'},
@@ -479,7 +502,7 @@ function merge(t,s){
 function loadSave(){
   const d=DEF();
   try{const r=JSON.parse(localStorage.getItem('tether_v2')||'null');if(r&&typeof r==='object'&&!Array.isArray(r))merge(d,r);}catch(e){}
-  d.coins=Math.max(0,Math.min(1e9,d.coins|0));d.lvl.cur=Math.max(1,Math.min(1e6,d.lvl.cur|0));d.lvl.max=Math.max(d.lvl.cur,Math.min(1e6,d.lvl.max|0));
+  d.coins=Math.max(0,Math.min(1e9,d.coins|0));d.lvl.max=Math.max(1,Math.min(MAXLV,d.lvl.max|0));d.lvl.cur=Math.max(1,Math.min(d.lvl.max,d.lvl.cur|0));d.set.fps=0;
   return d;
 }
 let save=loadSave();
@@ -490,17 +513,18 @@ let curLevel=Math.max(1,Math.min((save.lvl.cur|0)||1,(save.lvl.max|0)||1));
 /* ---------- content tables ---------- */
 /* The voyage: eight themed worlds (LPW levels each), then it loops with every earlier challenge mixed back in. Every world introduces one new challenge (m) and its own atmosphere (amb). */
 /* Zones get longer as the voyage goes on: 8 levels at first, then 9, 10, 11 and up to 12. The last level of a zone is its gauntlet. */
-function zLen(w){return Math.min(12,8+(w>>2));}
+const ZLENS=[8,8,8,8,8,8,8,8,9,9,9,9,10,10,10,10];   /* 16 zones, 140 levels in all */
+function zLen(w){return w<ZLENS.length?ZLENS[w]:10;}
 function zoneAt(t){let w=0,s=0;for(;;){const L=zLen(w);if(t<s+L)return{w:w,k:t-s,len:L,start:s};s+=L;w++;}}
 /* New circles: one more kind of anchor every 20 levels. Each is introduced on its own level with a title card, then mixes in more and more. */
 const NEWK=[
-  {id:'blink',at:20, n:'Blink',   d:'Catch it only while it glows'},
-  {id:'orbit',at:40, n:'Orbit',   d:'This circle moves in a loop'},
-  {id:'rush', at:60, n:'Rush',    d:'Spins much faster'},
-  {id:'flip', at:80, n:'Flip',    d:'Reverses your swing'},
-  {id:'repel',at:100,n:'Repulsor',d:'Pushes you away'},
-  {id:'tiny', at:120,n:'Tiny',    d:'A much smaller catch ring'},
-  {id:'ghost',at:140,n:'Ghost',   d:'Fades from sight until you are close'}];
+  {id:'blink',at:18, n:'Blink',   d:'Catch it only while it glows'},
+  {id:'orbit',at:42, n:'Orbit',   d:'This circle moves in a loop'},
+  {id:'rush', at:58, n:'Rush',    d:'Spins much faster'},
+  {id:'flip', at:75, n:'Flip',    d:'Reverses your swing'},
+  {id:'repel',at:102,n:'Repulsor',d:'Pushes you away'},
+  {id:'tiny', at:122,n:'Tiny',    d:'A much smaller catch ring'},
+  {id:'ghost',at:132,n:'Ghost',   d:'Fades from sight until you are close'}];
 const MECHS=['drift','crumble','well','wind','pulse','dark','horizon','swirl','boost','slow','portal','sing'];   /* the challenge introduced by worlds 2..8, in order */
 function levelSeed(n){return ((Math.imul(n,2654435761)^0x9e3779b9)>>>0);}
 /* Everything about a level comes from its number alone, so a level is the same every time it is played (learn it, master it, chase the stars)
@@ -528,7 +552,7 @@ function levelDef(n){
     len:za.len,zs:za.start,
     nk:NEWK.filter(function(q){return q.id!=='repel'&&n>=q.at;}).map(function(q){return {id:q.id,p:clamp(.07+(n-q.at)*.004,.07,.2)+(ZONES[zi].nk===q.id?.12:0)};}),
     intro:(NEWK.find(function(q){return q.at===n;})||{}).id||'',
-    repelP:n>=100?clamp(.1+(n-100)*.003,.1,.3)+(ZONES[zi].nk==='repel'?.1:0):0,
+    repelP:n>=102?clamp(.1+(n-102)*.003,.1,.3)+(ZONES[zi].nk==='repel'?.1:0):0,
     L:Math.min(42,8+Math.floor(t*.4))+(gaunt?3:0)+(mile?3:0),           /* anchors to the gate */
     gap:120+128*(1-Math.exp(-t/75)),                             /* average vertical distance between anchors */
     spread:64+116*(1-Math.exp(-t/70)),                           /* how far sideways the layout may wander */
@@ -589,11 +613,12 @@ function zoneInfo(w){
     let bh=(h+sg*off+360)%360;if(bh>=60&&bh<138)bh=(h-sg*off+360)%360;      /* the lower tint also stays out of the olive arc */
     bg=['hsl('+h+','+(50+Math.floor(r()*9))+'%,5%)','hsl('+bh+','+(50+Math.floor(r()*11))+'%,'+(13+Math.floor(r()*4))+'%)'];
   }
-  return zCache[w]={w:w,n:zoneName(w),h:h,bg:bg,zi:zi,m:ZONES[zi].m,amb:ZONES[zi].amb,t:ZONES[zi].t};
+  return zCache[w]={w:w,n:(ZNAMES[w]||zoneName(w)),h:h,bg:bg,zi:zi,m:ZONES[zi].m,amb:ZONES[zi].amb,t:ZONES[zi].t};
 }
 function zoneLabel(z){return 'Zone '+(z.w+1)+' · '+z.n;}
 function zoneReward(w){return 30+(w%16)*5;}                  /* shards for discovering a zone beyond the first eight */
 function mileBonus(n){return Math.min(250,40+n*2);}          /* first-clear bonus of a milestone level */
+function gemPct(D){return Math.round(clamp(.3+D.n*.0025,.3,.65)*100);}   /* share of gems for the second star */
 function perfOf(D){return Math.ceil(D.L*.5);}                /* perfect releases needed for the third star */
 function levelTag(D){
   if(D.n===1)return 'Reach the gate';
@@ -605,25 +630,26 @@ function levelTag(D){
 const ZONES=[
   {h:232,m:'',       amb:'star', t:'Where every orbit begins'},
   {h:162,m:'drift',  amb:'star', t:'Anchors drift on the solar wind'},
-  {h:16, m:'crumble',amb:'ember',t:'Embers crumble. Do not linger'},
+  {h:16, m:'crumble',nk:'blink',amb:'ember',t:'Embers crumble. Do not linger'},
   {h:305,m:'well',   amb:'star', t:'Gravity wells bend your flight'},
   {h:196,m:'wind',   amb:'snow', t:'Cold winds push you sideways'},
-  {h:52, m:'pulse',  amb:'star', t:'Hazards pulse with lightning',bg:['hsl(236,42%,6%)','hsl(44,58%,13%)']},
+  {h:52, m:'pulse',  nk:'orbit',amb:'star', t:'Hazards pulse with lightning',bg:['hsl(236,42%,6%)','hsl(44,58%,13%)']},
   {h:268,m:'dark',   amb:'none', t:'Light is scarce. Trust the dark'},
-  {h:338,m:'horizon',amb:'star',t:'Everything falls inward'},
-  {h:180,m:'swirl', nk:'rush', amb:'star', t:'Whirlpools spin your flight'},
+  {h:338,m:'horizon',nk:'rush',amb:'star',t:'Everything falls inward'},
+  {h:180,m:'swirl', amb:'star', t:'Whirlpools spin your flight'},
   {h:2,  m:'boost', nk:'flip', amb:'ember',t:'Gold rings fling you forward'},
-  {h:214,m:'slow',  nk:'blink',amb:'snow', t:'Thick clouds drag at your flight'},
-  {h:28, m:'portal',nk:'repel',amb:'ember',t:'Portals bend the way',bg:['hsl(24,45%,5%)','hsl(12,62%,14%)']},
-  {h:350,m:'sing',  nk:'tiny', amb:'none', t:'Black holes that swallow you',bg:['hsl(350,40%,3%)','hsl(335,55%,10%)']},
-  {h:128,m:'swirl', nk:'ghost',amb:'star', t:'Currents spin everything around',bg:['hsl(168,45%,4%)','hsl(152,55%,12%)']},
-  {h:250,m:'portal',nk:'orbit',amb:'snow', t:'Portals in the deep blue'},
-  {h:322,m:'boost', nk:'rush', amb:'ember',t:'Slingshots between the stars'}];
+  {h:214,m:'slow',  amb:'snow', t:'Thick clouds drag at your flight'},
+  {h:28, m:'portal',amb:'ember',t:'Portals bend the way',bg:['hsl(24,45%,5%)','hsl(12,62%,14%)']},
+  {h:350,m:'sing',  nk:'repel',amb:'none', t:'Black holes that swallow you',bg:['hsl(350,40%,3%)','hsl(335,55%,10%)']},
+  {h:128,m:'swirl', amb:'star', t:'Currents spin everything around',bg:['hsl(168,45%,4%)','hsl(152,55%,12%)']},
+  {h:250,m:'portal',nk:'tiny', amb:'snow', t:'Portals in the deep blue'},
+  {h:322,m:'boost', nk:'ghost',amb:'ember',t:'Slingshots between the stars'}];
+const ZNAMES=['First Light','Solar Drift','Cinder Reach','Deep Well','Frostwind','Stormfront','Umbra','Event Horizon','Maelstrom','Goldspire','Cloudveil','The Rift','Voidmaw','Emerald Tide','Abyssal Gate','Ozmora'];
 const ZREW=[0,25,40,60,80,100,130,160,170,180,190,200,210,220,230,240];   /* shards for discovering each zone for the first time */
-const TRAILS=[{id:'neon',n:'Neon',p:0},{id:'fire',n:'Inferno',p:150},{id:'rainbow',n:'Prism',p:400},{id:'stardust',n:'Stardust',p:700},{id:'plasma',n:'Plasma',p:1100}];
-const SKINS=[{id:'pearl',n:'Pearl',p:0},{id:'ember',n:'Ember',p:200},{id:'halo',n:'Halo',p:450},{id:'gem',n:'Gem',p:700},{id:'eclipse',n:'Eclipse',p:1000}];
+const TRAILS=[{id:'neon',n:'Neon',p:0},{id:'fire',n:'Inferno',p:500},{id:'ice',n:'Glacier',p:1000},{id:'rainbow',n:'Prism',p:1800},{id:'stardust',n:'Stardust',p:2800},{id:'plasma',n:'Plasma',p:4000},{id:'aurora',n:'Aurora',p:5500},{id:'nebula',n:'Nebula',p:7000}];
+const SKINS=[{id:'pearl',n:'Pearl',p:0},{id:'ember',n:'Ember',p:600},{id:'halo',n:'Halo',p:1200},{id:'gem',n:'Gem',p:2200},{id:'eclipse',n:'Eclipse',p:3500},{id:'nova',n:'Nova',p:4800},{id:'solar',n:'Solar',p:6200},{id:'rift',n:'Rift',p:8000}];
 const PU={shield:{h:195,t:'Shield'},surge:{h:322,t:'Double score'}};
-const REVIVE=100;
+const REVIVE=600;
 const FLY_MAX=560;   /* an orb that flies this far (px) without catching an anchor is lost */
 const MPOOL=[
   {id:'score',max:1,vals:[12,22,35],txt:n=>'Score '+n+' in one run'},
@@ -636,7 +662,7 @@ const MPOOL=[
 function discCount(){return Object.keys(save.disc||{}).length;}
 
 /* ---------- haptics, toast ---------- */
-function vib(p){if(save.set.haptic&&navigator.vibrate){try{navigator.vibrate(p);}catch(e){}}}
+function vib(p){}   /* no vibration in Ozmora */
 function toast(t){
   const box=$('toasts');while(box.children.length>2)box.removeChild(box.firstChild);
   const d=document.createElement('div');d.className='toast';d.textContent=t;box.appendChild(d);
@@ -1004,6 +1030,9 @@ function tcol(id,i,t,hv,tm){
     case 'fire':return 'hsl('+(8+t*45)+',100%,'+(46+t*14)+'%)';
     case 'rainbow':return 'hsl('+((i*14+tm*220)%360)+',100%,62%)';
     case 'stardust':return '#fff3b8';
+    case 'ice':return 'hsl('+(188+t*14)+',100%,'+(66+t*22)+'%)';
+    case 'aurora':return 'hsl('+(150+Math.sin(i*.35+tm*3)*70)+',95%,'+(60+t*8)+'%)';
+    case 'nebula':return 'hsl('+(270+Math.sin(i*.5+tm*2)*55)+',90%,'+(56+t*14)+'%)';
     case 'plasma':return 'hsl('+(300-t*105)+',100%,'+(58+Math.sin(i*.6+tm*8)*9)+'%)';
     default:return 'hsl('+hv+',100%,'+(58+t*14)+'%)';
   }
@@ -1039,6 +1068,22 @@ function drawOrb(c,skin,x,y,r,hv,tm){
       const g=c.createLinearGradient(-s,-s,s,s);g.addColorStop(0,'#fff');g.addColorStop(.5,'hsl(190,100%,70%)');g.addColorStop(1,'hsl(262,90%,66%)');
       c.fillStyle=g;c.beginPath();c.moveTo(0,-s*1.25);c.lineTo(s,0);c.lineTo(0,s*1.25);c.lineTo(-s,0);c.closePath();c.fill();
       c.strokeStyle='rgba(255,255,255,.9)';c.lineWidth=1.2;c.stroke();break;}
+    case 'nova':{
+      c.globalCompositeOperation='lighter';drawGlow(c,x,y,r*4.6,200,.9);c.globalCompositeOperation='source-over';
+      c.translate(x,y);c.rotate(tm*.9);c.fillStyle='#fff';
+      for(let k=0;k<4;k++){c.rotate(1.5708);c.beginPath();c.moveTo(-r*.28,0);c.lineTo(0,-r*2.5);c.lineTo(r*.28,0);c.closePath();c.fill();}
+      c.beginPath();c.arc(0,0,r*.8,0,6.283);c.fill();break;}
+    case 'solar':{
+      const pu=1+.07*Math.sin(tm*6);
+      c.globalCompositeOperation='lighter';drawGlow(c,x,y,r*4.6*pu,40,.95);c.globalCompositeOperation='source-over';
+      const g=c.createRadialGradient(x,y,0,x,y,r*1.2);g.addColorStop(0,'#fffbe0');g.addColorStop(.55,'#ffc21a');g.addColorStop(1,'#ff7a00');
+      c.fillStyle=g;c.beginPath();c.arc(x,y,r*1.1,0,6.283);c.fill();
+      c.strokeStyle='rgba(255,214,102,.85)';c.lineWidth=1.4;c.setLineDash([2,5]);c.lineDashOffset=-tm*14;c.beginPath();c.arc(x,y,r*1.75*pu,0,6.283);c.stroke();break;}
+    case 'rift':{
+      c.globalCompositeOperation='lighter';drawGlow(c,x,y,r*4.4,285,.9);c.globalCompositeOperation='source-over';
+      c.fillStyle='#07030f';c.beginPath();c.arc(x,y,r,0,6.283);c.fill();
+      c.strokeStyle='hsl(285,100%,72%)';c.lineWidth=Math.max(1.8,r*.28);c.stroke();
+      c.fillStyle='#fff';c.beginPath();c.arc(x+Math.cos(tm*5)*r*1.7,y+Math.sin(tm*5)*r*1.7,Math.max(1.4,r*.26),0,6.283);c.fill();break;}
     case 'eclipse':{
       c.globalCompositeOperation='lighter';drawGlow(c,x,y,r*4.4,hv,.95);c.globalCompositeOperation='source-over';
       c.fillStyle='#04050b';c.beginPath();c.arc(x,y,r,0,6.283);c.fill();
@@ -1434,14 +1479,14 @@ function levelClear(a){
   if(state!=='play')return;
   state='clear';overT=-.6;run.cleared=true;hideBanner();
   const D=run.def,lv=save.lvl,n=run.level,par=perfOf(D);
-  const need=Math.ceil(run.shardTotal*.4);
+  const need=Math.ceil(run.shardTotal*gemPct(D)/100);
   const f=[true,run.shards>=need,!run.revived&&run.perfects>=par];
   const st=f.filter(Boolean).length;
   const prevSt=lv.stars[n]||0,prevBp=lv.bp[n]||0,first=prevSt===0;
   lv.stars[n]=Math.max(prevSt,st);
   if(run.score>prevBp)lv.bp[n]=run.score;
   delete lv.bi[n];
-  if(n>=lv.max)lv.max=n+1;
+  if(n>=lv.max)lv.max=Math.min(MAXLV,n+1);
   finishRunStats();mEvent('score',run.score);
   const bonus=Math.floor(run.score/3)-run.bonusPaid;run.bonusPaid+=bonus;
   const mb=(D.mile&&first)?mileBonus(n):0;                      /* milestone levels pay a big one-time bonus */
@@ -1454,7 +1499,12 @@ function levelClear(a){
   sfx.zone();if(D.mile)setTimeout(function(){sfx.ach();},380);vib([20,30,40,30,60]);
   persist();hudCoins();
   $('hud').classList.add('hide');
-  setTimeout(function(){if(state==='clear')showClear();},650);
+  setTimeout(function(){if(state==='clear'){if(n>=MAXLV)showFinale();else showClear();}},650);
+}
+function showFinale(){
+  let tot=0;for(let i=1;i<=MAXLV;i++)tot+=save.lvl.stars[i]||0;
+  $('finStars').innerHTML=STAR_SVG+'<span>'+tot+' / '+MAXLV*3+' stars</span>';
+  $('clr').classList.add('hide');$('fin').classList.remove('hide');sfx.ach();
 }
 
 /* ---------- HUD + screens ---------- */
@@ -1480,6 +1530,28 @@ function updChips(){
 }
 /* ---------- ads (Android app only: the app injects window.AndroidAds; in a browser all of this stays hidden) ---------- */
 const AD_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+/* "Remove ads": a one-time purchase handled by the app (window.AndroidShop); it switches off the between-level ads and keeps the optional revive ad */
+const Shop={
+  noAds:false,price:'',
+  has(){return typeof window.AndroidShop!=='undefined'&&window.AndroidShop!==null;},
+  init(){if(!this.has())return;try{this.noAds=!!window.AndroidShop.isNoAds();this.price=window.AndroidShop.price()||'';}catch(e){}this.render();},
+  render(){
+    const on=this.has();
+    const a=$('sNoAds');a.hidden=!on;a.classList.toggle('done',this.noAds);$('sNoAdsV').textContent=this.noAds?'Done':this.price;
+    $('sRestore').hidden=!on||this.noAds;
+    const ov=!on||this.noAds;$('bOvNoAds').hidden=ov;$('ovSep').hidden=ov;
+    let pr=false;try{pr=!!(window.AndroidAds&&window.AndroidAds.privacyOptionsRequired&&window.AndroidAds.privacyOptionsRequired());}catch(e){}
+    $('sPriv').hidden=!pr;
+    $('sPol').hidden=!(typeof window.AndroidAds!=='undefined'&&window.AndroidAds&&window.AndroidAds.openPrivacyPolicy);
+  },
+  buy(){try{window.AndroidShop.buy();}catch(e){toast('Could not open the store');}}
+};
+window.tetherShopEvent=function(k,v){
+  if(k==='owned'){const was=Shop.noAds;Shop.noAds=(v==='1');if(Shop.noAds&&!was&&Shop.started)toast('Ads removed. Thank you!');}
+  else if(k==='price')Shop.price=v;
+  else if(k==='result')toast(v==='cancelled'?'Purchase cancelled':v==='pending'?'Purchase pending':'Could not complete the purchase');
+  Shop.started=true;Shop.render();
+};
 const Ads={
   busy:false,cb:null,since:0,last:Date.now(),want:false,wantT:0,
   /* tells the app when a run is in progress, so it never loads ads in the middle of play */
@@ -1498,7 +1570,7 @@ const Ads={
     try{window.AndroidAds.showRewarded();}catch(e){this.finish('rewarded','failed');}
   },
   /* one interstitial at most every 4 finished runs and every 90 s, never in the first 3 runs */
-  interstitialDue(){return this.has()&&!this.busy&&save.stats.runs>=3&&this.since>=4&&Date.now()-this.last>90000;},
+  interstitialDue(){return this.has()&&!Shop.noAds&&!this.busy&&save.stats.runs>=3&&this.since>=4&&Date.now()-this.last>90000;},
   showInterstitial(done){
     this.busy=true;this.cb=done;
     try{window.AndroidAds.showInterstitial();}catch(e){this.finish('interstitial','failed');}
@@ -1600,7 +1672,7 @@ function tickRevive(dt){
 }
 /* what each of the three stars asks for */
 function goalsHTML(){
-  const g=['Reach the final gate','Collect 40% of the gems','Land '+perfOf(run.def)+' perfect releases, no revive'];
+  const g=['Reach the final gate','Collect '+gemPct(run.def)+'% of the gems','Land '+perfOf(run.def)+' perfect releases, no revive'];
   return g.map(function(x){return '<div class="goal">'+x+'</div>';}).join('');
 }
 function renderHome(){
@@ -1620,13 +1692,13 @@ function renderHome(){
 }
 function showHome(){
   state='home';lastStartLv=0;ensureDay();newRun();hideBanner();
-  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');$('home').classList.remove('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.add('hide');
+  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');$('fin').classList.add('hide');$('home').classList.remove('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.add('hide');
   renderHome();
 }
 let lastStartLv=0;   /* retrying the same level skips the title card, so "one more try" is instant */
 function startPlay(){
   ensureDay();newRun();state='play';
-  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');$('home').classList.add('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.remove('hide');
+  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');$('fin').classList.add('hide');$('home').classList.add('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.remove('hide');
   lastChips='';$('chips').innerHTML='';
   const wantHint=save.stats.latches<10&&run.level===1,again=run.level===lastStartLv,card=announceLevel(again);lastStartLv=run.level;
   $('hint').classList.toggle('hide',!wantHint||card);
@@ -1640,7 +1712,7 @@ function lvStep(d){
 }
 function nextLevelNum(){return Math.min(run.level+1,save.lvl.max);}
 function goNext(){
-  if(state!=='clear'||overT<.5)return;
+  if(state!=='clear'||overT<.5||run.level>=MAXLV)return;
   leaveOver(function(){curLevel=nextLevelNum();save.lvl.cur=curLevel;persist();sfx.start();startPlay();});
 }
 function clearHome(){
@@ -1760,8 +1832,13 @@ document.querySelectorAll('#set .srow').forEach(function(b){
     persist();syncSettings();
   };
 });
-$('bSet').onclick=openSettings;
-$('bPSet').onclick=openSettings;
+$('sNoAds').onclick=function(){Shop.buy();};
+$('bOvNoAds').onclick=function(){Shop.buy();};
+$('sRestore').onclick=function(){try{window.AndroidShop.restore();toast('Checking your purchases');}catch(e){}};
+$('sPriv').onclick=function(){try{window.AndroidAds.showPrivacyOptions();}catch(e){}};
+$('sPol').onclick=function(){try{window.AndroidAds.openPrivacyPolicy();}catch(e){}};
+$('bSet').onclick=function(){Shop.render();openSettings();};
+$('bPSet').onclick=function(){Shop.render();openSettings();};
 $('bSetDone').onclick=closeSettings;
 
 /* ---------- input wiring ---------- */
@@ -1792,6 +1869,7 @@ $('bQuit').onclick=function(){showHome();};
 $('bLvPrev').onclick=function(){lvStep(-1);};
 $('bLvNext').onclick=function(){lvStep(1);};
 $('bNext').onclick=goNext;
+$('bFinHome').onclick=function(){clearHome();};
 $('bReplay').onclick=function(){if(state==='clear'&&overT>.5)leaveOver(function(){sfx.start();startPlay();});};
 $('bClHome').onclick=function(){if(state==='clear')leaveOver(clearHome);};
 $('over').addEventListener('click',function(e){if(e.target===$('over')&&!revOpen&&overT>.25)leaveOver(startPlay);});
@@ -2317,6 +2395,7 @@ window.tetherBack=function(){ if(setOpen){closeSettings();return true;}
   if(state==='clear'){clearHome();return true;}
   if(state==='play'){setPause(true);return true;} if(state==='pause'){setPause(false);return true;}
   if(state==='over'){if(revOpen){closeRev();return true;}showHome();return true;} return false; };
+Shop.init();
 showHome();
 requestAnimationFrame(frame);
 /* ---- loading screen: shows from the very first paint, leaves once the game has drawn a few frames ---- */
