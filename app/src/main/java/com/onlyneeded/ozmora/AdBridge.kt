@@ -49,9 +49,6 @@ class AdBridge(
     private var firstRewarded = false
     private var bootSent = false
     @Volatile private var playing = false   // home screen or a run: do not load ads now
-    /** Set when the player bought "Remove ads": no between-level ads are loaded or shown; the optional revive ad stays. */
-    @Volatile var noAds = false
-        set(v) { field = v; if (v) { interstitialLoaded = false; firstInterstitial = true; bootCheck() } }
 
     /** Ad status: goes to the log and, for the in-game performance meter, to the page. */
     private fun note(msg: String) {
@@ -129,7 +126,7 @@ class AdBridge(
     private fun requestLoads() {
         if (service == null || playing) return
         if (!rewardedLoaded) send(AdStore.MSG_LOAD_REWARDED)
-        if (!interstitialLoaded && !noAds) send(AdStore.MSG_LOAD_INTERSTITIAL)
+        if (!interstitialLoaded) send(AdStore.MSG_LOAD_INTERSTITIAL)
     }
 
     private fun onAdEvent(kind: String, status: String) {
@@ -212,7 +209,6 @@ class AdBridge(
     @JavascriptInterface
     fun showInterstitial() {
         main.post {
-            if (noAds) { notifyGame("interstitial", "closed"); return@post }
             if (showing || !interstitialLoaded || !fresh(interstitialLoadedAt)) { interstitialLoaded = false; notifyGame("interstitial", "failed"); return@post }
             interstitialLoaded = false
             launchHost("interstitial")

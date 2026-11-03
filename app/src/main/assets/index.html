@@ -229,9 +229,6 @@ button:active{transform:scale(.97)}
 .srow.on{color:var(--tx)}
 .sact{display:flex;align-items:center;justify-content:space-between;width:100%;padding:15px 4px;border-bottom:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);text-align:left;pointer-events:auto}
 .sact[hidden]{display:none}
-.sact b{font-weight:600;letter-spacing:.08em;color:var(--gold)}
-.sact.done{color:var(--tx);pointer-events:none}
-.sact.done b{color:var(--mut)}
 .sw{position:relative;width:38px;height:20px;border-radius:10px;background:rgba(255,255,255,.12);flex:none;transition:background .25s ease}
 .sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;opacity:.7;transition:transform .3s var(--ease),opacity .25s}
 .srow.on .sw{background:var(--acc)}
@@ -366,7 +363,7 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
     <div id="ovEarn"></div>
     <div class="acts">
       <button class="btn" id="bRetry">Retry level</button>
-      <div class="links"><button class="link" id="bHome">Home</button><i class="sep" id="ovSep" hidden></i><button class="link" id="bOvNoAds" hidden>Remove ads</button></div>
+      <button class="link" id="bHome">Home</button>
     </div>
   </div>
 </div>
@@ -433,8 +430,6 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
       <button class="srow" data-k="music" role="switch"><span>Music</span><i class="sw"></i></button>
       <button class="srow" data-k="shake" role="switch"><span>Screen shake</span><i class="sw"></i></button>
       <button class="srow" data-k="guide" role="switch"><span>Aim guide</span><i class="sw"></i></button>
-      <button class="sact" id="sNoAds" hidden><span>Remove ads</span><b id="sNoAdsV"></b></button>
-      <button class="sact" id="sRestore" hidden><span>Restore purchase</span></button>
       <button class="sact" id="sPriv" hidden><span>Privacy &amp; ad choices</span></button>
       <button class="sact" id="sPol" hidden><span>Privacy policy</span></button>
     </div>
@@ -1530,27 +1525,14 @@ function updChips(){
 }
 /* ---------- ads (Android app only: the app injects window.AndroidAds; in a browser all of this stays hidden) ---------- */
 const AD_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
-/* "Remove ads": a one-time purchase handled by the app (window.AndroidShop); it switches off the between-level ads and keeps the optional revive ad */
+/* privacy rows in settings (app only): ad choices where the consent form applies, and the privacy policy */
 const Shop={
-  noAds:false,price:'',
-  has(){return typeof window.AndroidShop!=='undefined'&&window.AndroidShop!==null;},
-  init(){if(!this.has())return;try{this.noAds=!!window.AndroidShop.isNoAds();this.price=window.AndroidShop.price()||'';}catch(e){}this.render();},
   render(){
-    const on=this.has();
-    const a=$('sNoAds');a.hidden=!on;a.classList.toggle('done',this.noAds);$('sNoAdsV').textContent=this.noAds?'Done':this.price;
-    $('sRestore').hidden=!on||this.noAds;
-    const ov=!on||this.noAds;$('bOvNoAds').hidden=ov;$('ovSep').hidden=ov;
     let pr=false;try{pr=!!(window.AndroidAds&&window.AndroidAds.privacyOptionsRequired&&window.AndroidAds.privacyOptionsRequired());}catch(e){}
     $('sPriv').hidden=!pr;
     $('sPol').hidden=!(typeof window.AndroidAds!=='undefined'&&window.AndroidAds&&window.AndroidAds.openPrivacyPolicy);
   },
-  buy(){try{window.AndroidShop.buy();}catch(e){toast('Could not open the store');}}
-};
-window.tetherShopEvent=function(k,v){
-  if(k==='owned'){const was=Shop.noAds;Shop.noAds=(v==='1');if(Shop.noAds&&!was&&Shop.started)toast('Ads removed. Thank you!');}
-  else if(k==='price')Shop.price=v;
-  else if(k==='result')toast(v==='cancelled'?'Purchase cancelled':v==='pending'?'Purchase pending':'Could not complete the purchase');
-  Shop.started=true;Shop.render();
+  init(){this.render();}
 };
 const Ads={
   busy:false,cb:null,since:0,last:Date.now(),want:false,wantT:0,
@@ -1570,7 +1552,7 @@ const Ads={
     try{window.AndroidAds.showRewarded();}catch(e){this.finish('rewarded','failed');}
   },
   /* one interstitial at most every 4 finished runs and every 90 s, never in the first 3 runs */
-  interstitialDue(){return this.has()&&!Shop.noAds&&!this.busy&&save.stats.runs>=3&&this.since>=4&&Date.now()-this.last>90000;},
+  interstitialDue(){return this.has()&&!this.busy&&save.stats.runs>=3&&this.since>=4&&Date.now()-this.last>90000;},
   showInterstitial(done){
     this.busy=true;this.cb=done;
     try{window.AndroidAds.showInterstitial();}catch(e){this.finish('interstitial','failed');}
@@ -1832,9 +1814,6 @@ document.querySelectorAll('#set .srow').forEach(function(b){
     persist();syncSettings();
   };
 });
-$('sNoAds').onclick=function(){Shop.buy();};
-$('bOvNoAds').onclick=function(){Shop.buy();};
-$('sRestore').onclick=function(){try{window.AndroidShop.restore();toast('Checking your purchases');}catch(e){}};
 $('sPriv').onclick=function(){try{window.AndroidAds.showPrivacyOptions();}catch(e){}};
 $('sPol').onclick=function(){try{window.AndroidAds.openPrivacyPolicy();}catch(e){}};
 $('bSet').onclick=function(){Shop.render();openSettings();};

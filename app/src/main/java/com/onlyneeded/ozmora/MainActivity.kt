@@ -25,7 +25,6 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var web: WebView
     private lateinit var ads: AdBridge
-    private lateinit var billing: BillingManager
     @Volatile private var pageReady = false
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -77,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     pageReady = true
                     // Set the ads up right away: the game's loading screen is still showing and
                     // waits for the first round, so any stutter happens there, not on the home screen.
-                    if (BuildConfig.ADS_ENABLED) { billing.start(); ads.start() }
+                    if (BuildConfig.ADS_ENABLED) ads.start()
                 }
 
                 // Never navigate away from the game.
@@ -89,12 +88,7 @@ class MainActivity : ComponentActivity() {
         }
         // Ads: the game talks to AdMob only through this small bridge (window.AndroidAds).
         ads = AdBridge(this, web)
-        billing = BillingManager(this, web) { owned -> ads.noAds = owned }
-        ads.noAds = billing.owned
-        if (BuildConfig.ADS_ENABLED) {
-            web.addJavascriptInterface(ads, "AndroidAds")
-            web.addJavascriptInterface(billing.bridge, "AndroidShop")
-        }
+        if (BuildConfig.ADS_ENABLED) web.addJavascriptInterface(ads, "AndroidAds")
 
         // Keep the page renderer at high priority so the system does not throttle it while we play.
         web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
@@ -143,7 +137,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         ads.stop()
-        billing.end()
         web.destroy()
         super.onDestroy()
     }

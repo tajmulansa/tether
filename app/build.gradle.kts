@@ -26,8 +26,8 @@ android {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 36
-        versionCode = 35
-        versionName = "3.6"
+        versionCode = 36
+        versionName = "3.7"
     }
 
     if (keystorePath != null) {
@@ -80,5 +80,4 @@ dependencies {
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("com.google.android.gms:play-services-ads:23.6.0")
     implementation("com.google.android.ump:user-messaging-platform:3.1.0")
-    implementation("com.android.billingclient:billing:7.1.1")
 }
