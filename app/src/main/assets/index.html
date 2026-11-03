@@ -174,10 +174,47 @@ button:active{transform:scale(.97)}
 #pause .ovwrap{gap:12px}
 .ovtag{font-size:10.5px;font-weight:600;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:14px}
 .ovtag.gold{color:var(--gold);text-shadow:0 0 22px rgba(255,209,102,.5)}
-#finTitle{font-size:34px;font-weight:300;line-height:1.15;text-align:center;letter-spacing:-.01em;margin-top:8px}
-#finMsg,#finSub{margin:0;text-align:center;font-size:13.5px;line-height:1.6;color:var(--mut);max-width:290px}
-#finStars{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;margin:6px 0 4px;color:var(--gold)}
-#finStars svg{width:18px;height:18px}
+/* THE ENDING: a celebration sweep through all 16 zones, then the thank-you screen */
+#vic{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(circle at 50% 46%,rgba(5,6,15,.35),rgba(5,6,15,.78));transition:opacity .8s ease;cursor:pointer}
+#vic.hide{display:none}#vic.out{opacity:0;pointer-events:none}
+#vicFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#vic .ve{position:relative;font-size:10.5px;font-weight:600;letter-spacing:.5em;text-indent:.5em;text-transform:uppercase;color:var(--gold);opacity:0;animation:vicIn 1s ease .2s forwards}
+#vic .vn{position:relative;font-size:clamp(96px,30vw,168px);font-weight:200;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:10px 0 6px;color:#fff;text-shadow:0 0 38px rgba(255,209,102,.35)}
+#vic .vl{position:relative;font-size:11px;font-weight:500;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:var(--mut)}
+#vic .vz{position:relative;margin-top:22px;font-size:15px;font-weight:300;letter-spacing:.22em;text-indent:.22em;text-transform:uppercase;min-height:22px}
+#vic.done .vn{animation:vicPop .9s var(--ease)}
+@keyframes vicIn{to{opacity:1}}
+@keyframes vicPop{0%{transform:scale(1)}35%{transform:scale(1.12)}100%{transform:scale(1)}}
+#fin{position:fixed;inset:0;z-index:50;background:#05060f;color:var(--tx);overflow:hidden;opacity:1}
+#fin.hide{display:none}
+#fin .sky{position:absolute;inset:0;background:radial-gradient(circle at 22% 14%,rgba(70,76,200,.26),transparent 58%),radial-gradient(circle at 78% 54%,rgba(130,60,190,.22),transparent 62%),radial-gradient(circle at 30% 94%,rgba(40,90,180,.2),transparent 66%),linear-gradient(180deg,#05060f,#10122a)}
+#finFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#fin .stage{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:max(28px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left))}
+#fin .emblem{position:relative;width:clamp(120px,30vh,176px);aspect-ratio:1;margin-bottom:clamp(26px,5.5vh,48px)}
+#fin .emblem svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#fin .r1{fill:none;stroke:rgba(255,255,255,.22);stroke-width:1;stroke-dasharray:2 7;stroke-linecap:round;opacity:.9}
+#fin .r2{fill:none;stroke:rgba(255,255,255,.09);stroke-width:1}
+#fin .glow{fill:url(#fcg)}#fin .core{fill:#f4f6ff}
+#fin .spin{transform-origin:100px 100px;animation:finSpin 9s linear infinite}
+#fin .orb{fill:hsl(232,90%,72%);filter:drop-shadow(0 0 7px hsl(232,90%,72%)) drop-shadow(0 0 16px hsl(232,90%,72%))}
+#fin .tail{fill:none;stroke:url(#ftg);stroke-width:3;stroke-linecap:round}
+@keyframes finSpin{to{transform:rotate(360deg)}}
+#fin .eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.5em;text-indent:.5em;text-transform:uppercase;color:var(--gold);margin-bottom:clamp(14px,2.4vh,20px)}
+#fin h1{margin:0;font-size:clamp(30px,9.6vw,64px);font-weight:200;letter-spacing:.26em;text-indent:.26em;text-transform:uppercase;line-height:1.1;color:#f4f6ff;white-space:nowrap}
+#fin .rule{width:1px;height:clamp(26px,5vh,42px);margin:clamp(20px,4vh,34px) 0;background:linear-gradient(180deg,transparent,rgba(255,255,255,.22),transparent)}
+#fin .msg{margin:0;max-width:30ch;font-size:clamp(14.5px,4vw,17px);font-weight:300;line-height:1.75;letter-spacing:.015em;color:rgba(244,246,255,.56);text-wrap:balance}
+#fin .msg+.msg{margin-top:.9em}#fin .msg em{font-style:normal;color:#f4f6ff;font-weight:400}
+#fin .sign{margin:clamp(26px,5vh,44px) 0 0;font-size:10.5px;font-weight:600;letter-spacing:.4em;text-indent:.4em;text-transform:uppercase;color:rgba(244,246,255,.32)}
+#fin .fhome{margin-top:clamp(18px,3vh,28px);font-size:10.5px;font-weight:600;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:rgba(244,246,255,.5);padding:12px 18px;border:1px solid rgba(255,255,255,.14);border-radius:99px}
+#fin .wm{position:absolute;left:0;right:0;bottom:max(26px,env(safe-area-inset-bottom));display:flex;justify-content:center;align-items:baseline;font-size:13px;font-weight:300;letter-spacing:.6em;line-height:1;text-transform:uppercase;color:rgba(244,246,255,.32);pointer-events:none}
+#fin .wm .o{display:inline-block;width:.76em;height:.76em;margin-right:.6em;overflow:visible;opacity:.9}
+#fin .wm .o circle{fill:none;stroke:currentColor;stroke-width:7}#fin .wm .t{margin-right:-.6em}
+#fin .rv{opacity:0;transform:translateY(14px);animation:finRv 1.4s var(--ease) forwards;animation-delay:calc(var(--d,0)*1s)}
+#fin .emblem.rv{transform:scale(.9)}
+@keyframes finRv{to{opacity:1;transform:none}}
+@media (max-height:640px){#fin .emblem{width:104px;margin-bottom:20px}#fin .rule{margin:16px 0;height:22px}#fin .sign{margin-top:20px}}
+@media (max-height:540px){#fin .wm{display:none}}
+@media (max-height:460px){#fin .emblem,#fin .rule{display:none}#fin .msg{max-width:46ch;font-size:14px;line-height:1.6}}
 #rvScore,#ovScore{font-size:120px;font-weight:200;line-height:.95;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin-top:6px}
 #rvScore{font-size:88px}
 #ovBest,.rvsub{color:var(--mut);font-size:10.5px;font-weight:500;letter-spacing:.24em;text-indent:.24em;text-transform:uppercase;margin-top:4px}
@@ -383,15 +420,34 @@ body.playing .chip,body.playing .ibtn,body.playing .pill,body.playing #hint,body
   </div>
 </div>
 
-<div id="fin" class="screen hide">
-  <div class="ovwrap">
-    <div class="ovtag gold">You reached the end</div>
-    <div id="finTitle">Thank you for playing</div>
-    <p id="finMsg">You crossed all 16 zones and 140 levels. Every orbit you caught, you earned.</p>
-    <div id="finStars"></div>
-    <p id="finSub">Ozmora was made with care for players like you. Go back to any level and chase the stars you missed.</p>
-    <div class="acts"><button class="btn" id="bFinHome">Back to home</button></div>
-  </div>
+<div id="vic" class="hide" aria-hidden="true">
+  <canvas id="vicFx"></canvas>
+  <div class="ve" id="vicE">Your journey</div>
+  <div class="vn" id="vicN">0</div>
+  <div class="vl" id="vicL">levels</div>
+  <div class="vz" id="vicZ"></div>
+</div>
+
+<div id="fin" class="hide">
+  <div class="sky"></div><canvas id="finFx" aria-hidden="true"></canvas>
+  <main class="stage">
+    <div class="emblem rv" style="--d:.1" aria-hidden="true">
+      <svg viewBox="0 0 200 200"><defs>
+        <radialGradient id="fcg"><stop offset="0" stop-color="hsl(232,90%,72%)" stop-opacity=".55"/><stop offset="1" stop-color="hsl(232,90%,72%)" stop-opacity="0"/></radialGradient>
+        <linearGradient id="ftg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="hsl(232,90%,72%)" stop-opacity="0"/><stop offset="1" stop-color="hsl(262,90%,80%)" stop-opacity=".95"/></linearGradient></defs>
+        <circle class="glow" cx="100" cy="100" r="64"/><circle class="r2" cx="100" cy="100" r="96"/><circle class="r1" cx="100" cy="100" r="62"/><circle class="core" cx="100" cy="100" r="5"/>
+        <g class="spin"><path class="tail" d="M 100 38 A 62 62 0 0 0 38.4 92.4" transform="rotate(90 100 100)"/><circle class="orb" cx="162" cy="100" r="7"/></g>
+      </svg>
+    </div>
+    <p class="eyebrow rv" style="--d:.5">The end</p>
+    <h1 class="rv" style="--d:.75">Thank you</h1>
+    <div class="rule rv" style="--d:1.05"></div>
+    <p class="msg rv" style="--d:1.25">Every tap, every orbit, every near miss gave this little universe its <em>pulse</em>.</p>
+    <p class="msg rv" style="--d:1.55">Wherever your next orbit takes you, may it be a beautiful one.</p>
+    <p class="sign rv" style="--d:2">With gratitude</p>
+    <button class="fhome rv" id="bFinHome" style="--d:3">Back to home</button>
+    <div class="wm rv" style="--d:2.4" role="img" aria-label="Ozmora"><svg class="o" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="47"/></svg><span class="t">zmora</span></div>
+  </main>
 </div>
 
 <div id="rdy" class="hide"><span id="rdyN">3</span><small>Get ready</small></div>
@@ -1496,10 +1552,75 @@ function levelClear(a){
   $('hud').classList.add('hide');
   setTimeout(function(){if(state==='clear'){if(n>=MAXLV)showFinale();else showClear();}},650);
 }
+/* the ending: a sweep through every zone with fireworks in each zone's colour, then the thank-you screen */
+const VIC={on:false,t0:0,ps:[],zi:-1,lv:0,fin:false,raf:0,g:null,W:0,H:0,dpr:1,ended:false};
+function vicBurst(x,y,h,n){
+  for(let i=0;i<n;i++){const a=Math.random()*6.283,v=60+Math.random()*230;VIC.ps.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:1,d:.55+Math.random()*.7,h:h+(Math.random()*30-15)});}
+  if(VIC.ps.length>520)VIC.ps.splice(0,VIC.ps.length-520);
+}
 function showFinale(){
-  let tot=0;for(let i=1;i<=MAXLV;i++)tot+=save.lvl.stars[i]||0;
-  $('finStars').innerHTML=STAR_SVG+'<span>'+tot+' / '+MAXLV*3+' stars</span>';
-  $('clr').classList.add('hide');$('fin').classList.remove('hide');sfx.ach();
+  const cv=$('vicFx');VIC.dpr=Math.min(2,window.devicePixelRatio||1);VIC.W=innerWidth;VIC.H=innerHeight;
+  cv.width=Math.round(VIC.W*VIC.dpr);cv.height=Math.round(VIC.H*VIC.dpr);VIC.g=cv.getContext('2d');
+  VIC.on=true;VIC.t0=performance.now();VIC.ps=[];VIC.zi=-1;VIC.lv=0;VIC.fin=false;VIC.ended=false;VIC.last=VIC.t0;
+  $('clr').classList.add('hide');$('vic').classList.remove('hide','out','done');
+  $('vicN').textContent='0';$('vicE').textContent='Your journey';$('vicL').textContent='levels';$('vicZ').textContent='';
+  sfx.zone();VIC.raf=requestAnimationFrame(vicFrame);
+}
+function vicFrame(now){
+  if(!VIC.on)return;
+  const t=(now-VIC.t0)/1000,dt=Math.min(.05,(now-VIC.last)/1000);VIC.last=now;
+  const DUR=5,k=Math.max(0,Math.min(1,(t-.7)/DUR)),e=1-Math.pow(1-k,2.2);
+  const lv=Math.min(MAXLV,Math.round(e*MAXLV));
+  if(lv!==VIC.lv){
+    VIC.lv=lv;$('vicN').textContent=lv;
+    const w=zoneAt(Math.max(0,lv-1)).w;
+    if(w!==VIC.zi){VIC.zi=w;const z=zoneInfo(w);
+      $('vicZ').textContent='Zone '+(w+1)+' · '+z.n;$('vicZ').style.color='hsl('+z.h+',90%,72%)';
+      for(let b=0;b<2;b++)vicBurst(VIC.W*(.2+Math.random()*.6),VIC.H*(.14+Math.random()*.36),z.h,48);
+      try{sfx.perfect();}catch(e){}
+    }
+  }
+  if(!VIC.fin&&lv>=MAXLV&&k>=1){
+    VIC.fin=true;VIC.tf=t;$('vic').classList.add('done');$('vicE').textContent='Complete';$('vicL').textContent='levels · 16 zones';$('vicZ').textContent='';
+    for(let b=0;b<7;b++)setTimeout(function(){vicBurst(VIC.W*(.15+Math.random()*.7),VIC.H*(.12+Math.random()*.4),[46,320,190,262,12,150,232][b],70);try{sfx.perfect();}catch(e){}},b*190);
+    try{sfx.ach();}catch(e){}
+  }
+  /* draw */
+  const g=VIC.g;g.setTransform(VIC.dpr,0,0,VIC.dpr,0,0);g.clearRect(0,0,VIC.W,VIC.H);g.globalCompositeOperation='lighter';
+  for(let i=VIC.ps.length-1;i>=0;i--){
+    const q=VIC.ps[i];q.l-=dt/q.d;if(q.l<=0){VIC.ps.splice(i,1);continue;}
+    q.vy+=150*dt;q.vx*=.985;q.x+=q.vx*dt;q.y+=q.vy*dt;
+    g.globalAlpha=Math.min(1,q.l*1.4);g.fillStyle='hsl('+q.h+',100%,'+(60+q.l*18)+'%)';
+    g.beginPath();g.arc(q.x,q.y,1.2+q.l*2,0,6.283);g.fill();
+  }
+  g.globalCompositeOperation='source-over';g.globalAlpha=1;
+  if(VIC.fin&&t-VIC.tf>2.6){endVictory();return;}
+  VIC.raf=requestAnimationFrame(vicFrame);
+}
+function endVictory(){
+  if(VIC.ended)return;VIC.ended=true;VIC.on=false;cancelAnimationFrame(VIC.raf);
+  $('fin').classList.remove('hide');finStarsStart();
+  $('vic').classList.add('out');setTimeout(function(){$('vic').classList.add('hide');},850);
+}
+$('vic').addEventListener('click',function(){if(VIC.on&&performance.now()-VIC.t0>1500)endVictory();});
+/* drifting stars behind the thank-you text (runs only while it is shown) */
+const FIN={on:false,stars:[],g:null,W:0,H:0,dpr:1};
+function finStarsStart(){
+  const cv=$('finFx');FIN.dpr=Math.min(2,window.devicePixelRatio||1);FIN.W=innerWidth;FIN.H=innerHeight;
+  cv.width=Math.round(FIN.W*FIN.dpr);cv.height=Math.round(FIN.H*FIN.dpr);FIN.g=cv.getContext('2d');
+  const n=Math.round(Math.min(90,FIN.W*FIN.H/9000));FIN.stars=[];
+  for(let i=0;i<n;i++)FIN.stars.push({x:Math.random()*FIN.W,y:Math.random()*FIN.H,r:.4+Math.random()*.9,a:.15+Math.random()*.45,s:.4+Math.random(),p:Math.random()*6.28,v:2+Math.random()*5});
+  FIN.on=true;requestAnimationFrame(finStarsFrame);
+}
+function finStarsFrame(now){
+  if(!FIN.on)return;
+  const g=FIN.g,t=now/1000;g.setTransform(FIN.dpr,0,0,FIN.dpr,0,0);g.clearRect(0,0,FIN.W,FIN.H);g.fillStyle='#dfe4ff';
+  for(const s of FIN.stars){const y=((s.y-t*s.v)%FIN.H+FIN.H)%FIN.H;g.globalAlpha=s.a*(.65+.35*Math.sin(t*s.s+s.p));g.beginPath();g.arc(s.x,y,s.r,0,6.283);g.fill();}
+  g.globalAlpha=1;requestAnimationFrame(finStarsFrame);
+}
+function hideEnding(){
+  VIC.on=false;cancelAnimationFrame(VIC.raf);FIN.on=false;
+  $('vic').classList.add('hide');$('vic').classList.remove('out','done');$('fin').classList.add('hide');
 }
 
 /* ---------- HUD + screens ---------- */
@@ -1674,13 +1795,13 @@ function renderHome(){
 }
 function showHome(){
   state='home';lastStartLv=0;ensureDay();newRun();hideBanner();
-  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');$('fin').classList.add('hide');$('home').classList.remove('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.add('hide');
+  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');hideEnding();$('home').classList.remove('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.add('hide');
   renderHome();
 }
 let lastStartLv=0;   /* retrying the same level skips the title card, so "one more try" is instant */
 function startPlay(){
   ensureDay();newRun();state='play';
-  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');$('fin').classList.add('hide');$('home').classList.add('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.remove('hide');
+  revOpen=false;$('rdy').classList.add('hide');$('rev').classList.add('hide');$('clr').classList.add('hide');hideEnding();$('home').classList.add('hide');$('over').classList.add('hide');$('pause').classList.add('hide');$('hud').classList.remove('hide');
   lastChips='';$('chips').innerHTML='';
   const wantHint=save.stats.latches<10&&run.level===1,again=run.level===lastStartLv,card=announceLevel(again);lastStartLv=run.level;
   $('hint').classList.toggle('hide',!wantHint||card);
