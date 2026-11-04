@@ -45,17 +45,13 @@ class AdBridge(
     private var rewardedLoadedAt = 0L
     private var interstitialLoadedAt = 0L
     @Volatile private var showing = false
+    @Volatile private var adResult = ""   // last rewarded/interstitial result, kept until the game takes it
     private var firstInterstitial = false
     private var firstRewarded = false
     private var bootSent = false
     @Volatile private var playing = false   // home screen or a run: do not load ads now
 
-    /** Ad status: goes to the log and, for the in-game performance meter, to the page. */
-    private fun note(msg: String) {
-        Log.d("OzmoraAds", msg)
-        val safe = msg.replace("\\", " ").replace("'", " ").replace("\n", " ").take(90)
-        main.post { web.evaluateJavascript("window.tetherAdLog&&window.tetherAdLog('$safe')", null) }
-    }
+    private fun note(msg: String) { Log.d("OzmoraAds", msg) }
 
     // ---------------------------------------------------------------- startup + consent
 
@@ -137,7 +133,7 @@ class AdBridge(
                     firstRewarded = true; bootCheck(); notifyGame("rewarded", "ready")
                 }
                 "loadfailed" -> { rewardedLoaded = false; firstRewarded = true; bootCheck(); notifyGame("rewarded", "loadfailed") }
-                else -> { showing = false; rewardedLoaded = false; notifyGame("rewarded", status) }
+                else -> { showing = false; rewardedLoaded = false; adResult = status; notifyGame("rewarded", status) }
             }
             "interstitial" -> when (status) {
                 "loaded" -> {
@@ -145,7 +141,7 @@ class AdBridge(
                     firstInterstitial = true; bootCheck()
                 }
                 "loadfailed" -> { interstitialLoaded = false; firstInterstitial = true; bootCheck() }
-                else -> { showing = false; interstitialLoaded = false; notifyGame("interstitial", status) }
+                else -> { showing = false; interstitialLoaded = false; adResult = status; notifyGame("interstitial", status) }
             }
         }
     }
@@ -172,6 +168,15 @@ class AdBridge(
     @JavascriptInterface
     fun hasRewarded(): Boolean = !showing && rewardedLoaded && fresh(rewardedLoadedAt)
 
+    /** The game asks what the last ad did ("reward", "closed", "failed" or ""); the answer is given once. */
+    @JavascriptInterface
+    fun takeAdResult(): String { val r = adResult; adResult = ""; return r }
+
+    /** Called when the game comes back to the front: lets the page collect an ad result that arrived while it was suspended. */
+    fun pollGame() {
+        main.post { web.evaluateJavascript("window.tetherAdPoll&&window.tetherAdPoll()", null) }
+    }
+
     /** The player tapped the revive-ad button but no ad was ready: load now. */
     @JavascriptInterface
     fun retryRewarded() {
@@ -191,7 +196,7 @@ class AdBridge(
     }
 
     private fun launchHost(kind: String) {
-        showing = true
+        showing = true; adResult = ""
         try {
             activity.startActivity(Intent(activity, AdHostActivity::class.java).putExtra("kind", kind))
         } catch (e: Exception) { showing = false; notifyGame(kind, "failed") }

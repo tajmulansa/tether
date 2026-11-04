@@ -125,6 +125,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         web.onResume()
+        ads.pollGame()
         hideSystemBars()
     }
 
