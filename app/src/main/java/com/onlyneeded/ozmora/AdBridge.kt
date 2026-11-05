@@ -45,6 +45,7 @@ class AdBridge(
     private var rewardedLoadedAt = 0L
     private var interstitialLoadedAt = 0L
     @Volatile private var showing = false
+    @Volatile private var lastKind = "rewarded"
     @Volatile private var adResult = ""   // last rewarded/interstitial result, kept until the game takes it
     private var firstInterstitial = false
     private var firstRewarded = false
@@ -109,7 +110,10 @@ class AdBridge(
         }
         override fun onServiceDisconnected(name: ComponentName?) {
             note("ads process stopped")
+            // killed while an ad was up (stuck screen): tell the game so it never waits for an answer
+            val wasShowing = showing
             service = null; rewardedLoaded = false; interstitialLoaded = false; showing = false
+            if (wasShowing) { adResult = "failed"; notifyGame(lastKind, "failed") }
         }
     }
 
@@ -196,7 +200,7 @@ class AdBridge(
     }
 
     private fun launchHost(kind: String) {
-        showing = true; adResult = ""
+        showing = true; adResult = ""; lastKind = kind
         try {
             activity.startActivity(Intent(activity, AdHostActivity::class.java).putExtra("kind", kind))
         } catch (e: Exception) { showing = false; notifyGame(kind, "failed") }

@@ -102,21 +102,21 @@ button:active{transform:scale(.97)}
 }
 @keyframes drip{0%{transform:scaleY(0)}50%{transform:scaleY(1)}100%{transform:scaleY(1);opacity:0}}
 #home .top,#home .title,#home .bottom{position:relative;z-index:1;width:100%;max-width:440px}
-#home .top{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px}
+#home .top{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px}
 /* zone progress: one tick per level of the zone; lit once cleared, outlined for the one selected */
 /* zone header: the zone's number and name, and one node per level (lit once cleared, a ring on the selected one) */
-.zone-tag{display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center}
-.zone-tag small{font-size:10px;font-weight:600;letter-spacing:.42em;text-indent:.42em;text-transform:uppercase;color:var(--acc)}
-.zone-tag b{font-size:17px;font-weight:300;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:var(--tx);line-height:1.2}
-.zprog{display:flex;align-items:center;margin-top:4px}
-.zprog i{position:relative;display:block;width:7px;height:7px;margin-right:17px;border-radius:50%;background:rgba(255,255,255,.16);transition:background .4s ease,box-shadow .4s ease}
+.zone-tag{display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center}
+.zone-tag small{font-size:8.5px;font-weight:600;letter-spacing:.42em;text-indent:.42em;text-transform:uppercase;color:var(--acc)}
+.zone-tag b{font-size:12.5px;font-weight:300;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:rgba(244,246,255,.85);line-height:1.2}
+.zprog{display:flex;align-items:center;margin-top:2px}
+.zprog i{position:relative;display:block;width:4px;height:4px;margin-right:12px;border-radius:50%;background:rgba(255,255,255,.18);transition:background .4s ease,box-shadow .4s ease}
 .zprog i:last-child{margin-right:0}
-.zprog i::after{content:"";position:absolute;left:100%;top:50%;width:17px;height:1px;margin-top:-.5px;background:rgba(255,255,255,.12)}
+.zprog i::after{content:"";position:absolute;left:100%;top:50%;width:12px;height:1px;margin-top:-.5px;background:rgba(255,255,255,.1)}
 .zprog i:last-child::after{display:none}
-.zprog i.on{background:var(--acc);box-shadow:0 0 9px var(--acc)}
-.zprog i.on::after{background:linear-gradient(90deg,var(--acc),rgba(255,255,255,.12))}
-.zprog i.cur{box-shadow:0 0 0 3px rgba(5,6,15,.9),0 0 0 4.2px rgba(255,255,255,.7)}
-.zprog i.cur.on{box-shadow:0 0 0 3px rgba(5,6,15,.9),0 0 0 4.2px var(--acc),0 0 12px var(--acc)}
+.zprog i.on{background:var(--acc);box-shadow:0 0 6px var(--acc)}
+.zprog i.on::after{background:linear-gradient(90deg,var(--acc),rgba(255,255,255,.1))}
+.zprog i.cur{box-shadow:0 0 0 2.5px rgba(5,6,15,.9),0 0 0 3.5px rgba(255,255,255,.7)}
+.zprog i.cur.on{box-shadow:0 0 0 2.5px rgba(5,6,15,.9),0 0 0 3.5px var(--acc),0 0 9px var(--acc)}
 .title{margin-top:8vh;display:flex;flex-direction:column;align-items:center}
 .wm{margin:0;display:flex;align-items:center;font-size:36px;font-weight:200;letter-spacing:.32em;line-height:1;text-transform:uppercase;color:var(--tx)}
 .wm span{margin-right:-.32em}
@@ -651,7 +651,8 @@ function zoneInfo(w){
 function zoneLabel(z){return '<small>Zone '+(z.w+1)+'</small><b>'+z.n+'</b>';}
 function zoneReward(w){return 30+(w%16)*5;}                  /* shards for discovering a zone beyond the first eight */
 function mileBonus(n){return Math.min(250,40+n*2);}          /* first-clear bonus of a milestone level */
-function gemPct(D){return Math.round(clamp(.3+D.n*.0025,.3,.65)*100);}   /* share of gems for the second star */
+const GEM_PCT=70,GEM_VAL=2;                                    /* share of gems for the second star; each gem is worth 2 */
+function gemPct(){return GEM_PCT;}
 function perfOf(D){return Math.ceil(D.L*.5);}                /* perfect releases needed for the third star */
 const ZONES=[
   {h:225,m:'',       amb:'star', t:'Where every orbit begins'},
@@ -1442,7 +1443,7 @@ function collect(it){
   if(it.k==='s'){
     if(time-run.lastShard>.7)run.streak=0;
     run.lastShard=time;run.streak++;
-    run.shards++;save.coins++;save.stats.shards++;mEvent('shards',1);
+    run.shards++;save.coins+=GEM_VAL;save.stats.shards++;mEvent('shards',1);
     burst(it.x,it.y,5,'#ffd166',90);
     sfx.shard(run.streak);
     hudCoins();
@@ -1523,7 +1524,7 @@ function levelClear(a){
   const mb=(D.mile&&first)?mileBonus(n):0;                      /* milestone levels pay a big one-time bonus */
   const extra=mb+(first?15+Math.min(60,n*2):5)+Math.max(0,st-prevSt)*10;
   save.coins+=bonus+extra;
-  run.clr={f:f,need:need,par:par,first:first,prevBp:prevBp,earned:run.shards+run.bonusPaid+extra,mile:D.mile,mb:mb};
+  run.clr={f:f,need:need,par:par,first:first,prevBp:prevBp,earned:run.shards*GEM_VAL+run.bonusPaid+extra,mile:D.mile,mb:mb};
   const p=player;
   burst(p.x,p.y,44,'#ffd36b',240);ring(a.x,a.y,46,150);ring(a.x,a.y,hue,100);
   if(save.set.shake)shake=Math.max(shake,6);
@@ -1677,7 +1678,7 @@ function fillOver(){
   bar.firstChild.style.transition='none';bar.firstChild.style.width='0%';void bar.offsetWidth;bar.firstChild.style.transition='';
   const pct=Math.min(100,run.maxIdx/run.L*100);
   setTimeout(function(){bar.firstChild.style.width=pct+'%';},30);
-  $('ovEarn').innerHTML='<i class="shard"></i>+'+(run.shards+run.bonusPaid)+' gems earned';
+  $('ovEarn').innerHTML='<i class="shard"></i>+'+(run.shards*GEM_VAL+run.bonusPaid)+' gems earned';
 }
 function showClear(){
   const c=run.clr;
@@ -2028,7 +2029,9 @@ function update(dt,real){
     for(const it of items){
       if(it.got)continue;
       const dx=p.x-it.x,dy=p.y-it.y,d=Math.hypot(dx,dy);
-      if(d<(it.k==='s'?22:28)){it.got=1;collect(it);}
+      /* gems lean toward the orb when it passes close, so a good line collects them */
+      if(it.k==='s'&&d<58&&d>1){const m=Math.min(1,dt*(4+(58-d)*.16))*(1-d/70);it.x+=dx*m;it.y+=dy*m;}
+      if(d<(it.k==='s'?24:28)){it.got=1;collect(it);}
     }
     if(run.started)camY-=(run.def.scroll+Math.min(run.score,60)*.35)*dt;
     const target=p.y-H*0.6;

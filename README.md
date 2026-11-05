@@ -31,10 +31,9 @@ With those set, each run also produces a signed release APK and an `.aab` for Pl
 
 ## Ads (AdMob)
 
-The app shows three kinds of ads, all through Google AdMob:
+The app shows two kinds of ads, all through Google AdMob:
 
 - **Rewarded: "Watch ad to revive"** gives a free revive after a run ends.
-- **Rewarded: "Watch ad: +N shards"** doubles the shards earned in that run.
 - **Interstitial:** one full-screen ad when leaving the game-over screen, at most once every
   4 finished runs and every 90 seconds, never in the first 3 runs, and never right after a
   rewarded ad.
