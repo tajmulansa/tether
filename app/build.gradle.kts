@@ -7,14 +7,18 @@ plugins {
 // workflow from repository secrets). Without them, only the debug APK is signed.
 val keystorePath: String? = System.getenv("KEYSTORE_PATH")
 
-// AdMob IDs. Google's official TEST IDs are used unless real ones are provided through
-// environment variables (GitHub secrets). Debug builds ALWAYS use the test IDs, so you can
+// AdMob IDs. Release builds use the live IDs below (or ones given through environment variables).
+// Debug builds ALWAYS use Google's official TEST IDs, so you can
 // never click your own live ads while testing (that can get an AdMob account banned).
 val testAppId = "ca-app-pub-3940256099942544~3347511713"
 val testInterstitialId = "ca-app-pub-3940256099942544/1033173712"
 val testRewardedId = "ca-app-pub-3940256099942544/5224354917"
 // Test build with the ad SDK switched off completely (gradle -PnoAds): installs next to the normal app.
 val noAds = project.hasProperty("noAds")
+// Real (live) AdMob IDs. These are public identifiers (they ship inside the app), not secrets.
+val liveAppId = "ca-app-pub-4812493783151469~8071645170"
+val liveInterstitialId = "ca-app-pub-4812493783151469/7720503413"
+val liveRewardedId = "ca-app-pub-4812493783151469/4004619688"
 fun envOr(name: String, fallback: String): String =
     System.getenv(name)?.takeIf { it.isNotBlank() } ?: fallback
 
@@ -26,8 +30,8 @@ android {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 36
-        versionCode = 43
-        versionName = "4.4"
+        versionCode = 44
+        versionName = "4.5"
     }
 
     if (keystorePath != null) {
@@ -54,9 +58,9 @@ android {
             buildConfigField("String", "ADMOB_REWARDED_ID", "\"$testRewardedId\"")
         }
         release {
-            manifestPlaceholders["admobAppId"] = envOr("ADMOB_APP_ID", testAppId)
-            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"${envOr("ADMOB_INTERSTITIAL_ID", testInterstitialId)}\"")
-            buildConfigField("String", "ADMOB_REWARDED_ID", "\"${envOr("ADMOB_REWARDED_ID", testRewardedId)}\"")
+            manifestPlaceholders["admobAppId"] = envOr("ADMOB_APP_ID", liveAppId)
+            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"${envOr("ADMOB_INTERSTITIAL_ID", liveInterstitialId)}\"")
+            buildConfigField("String", "ADMOB_REWARDED_ID", "\"${envOr("ADMOB_REWARDED_ID", liveRewardedId)}\"")
             isMinifyEnabled = false
             if (keystorePath != null) {
                 signingConfig = signingConfigs.getByName("release")
