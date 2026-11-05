@@ -28,7 +28,7 @@ import com.google.android.ump.UserMessagingPlatform
  *  - interstitial: status "closed" or "failed"; the game continues in both cases
  */
 /** Where the privacy policy page is published (see docs/privacy-policy.html in the repository). */
-private const val PRIVACY_URL = "https://tajmulansa.github.io/tether/privacy-policy.html"
+private const val PRIVACY_URL = "https://confusion-spectrum-9e9.notion.site/Ozmora-Privacy-Policy-40f8f174523680d89af6c9773d46c656"
 
 class AdBridge(
     private val activity: MainActivity,
