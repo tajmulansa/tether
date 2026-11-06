@@ -58,7 +58,7 @@ android {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 36
-        versionCode = 47
+        versionCode = 48
         versionName = "4.8"
     }
 
@@ -76,7 +76,7 @@ android {
     buildFeatures {
         buildConfig = true
     }
-    sourceSets["main"].assets.srcDir(gameOut)
+    sourceSets["main"].assets.srcDir(encryptGame.map { gameOut.get() })
     defaultConfig.buildConfigField("String", "GK1", "\"${hex(ByteArray(32) { (gameKey[it].toInt() xor keyMask[it].toInt()).toByte() })}\"")
     defaultConfig.buildConfigField("String", "GK2", "\"${hex(keyMask)}\"")
     defaultConfig.buildConfigField("boolean", "ADS_ENABLED", if (noAds) "false" else "true")
