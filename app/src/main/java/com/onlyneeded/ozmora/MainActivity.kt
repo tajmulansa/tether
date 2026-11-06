@@ -3,6 +3,10 @@ package com.onlyneeded.ozmora
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
+import java.io.ByteArrayInputStream
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import android.view.View
 import android.view.WindowManager
 import android.webkit.WebResourceRequest
@@ -26,6 +30,17 @@ class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private lateinit var ads: AdBridge
     @Volatile private var pageReady = false
+
+    /** The game page is stored encrypted in the app; it is decrypted here, in memory only. */
+    private fun gameHtml(): ByteArray {
+        val raw = assets.open("game.bin").use { it.readBytes() }
+        val key = ByteArray(32) { i ->
+            (BuildConfig.GK1.substring(i * 2, i * 2 + 2).toInt(16) xor BuildConfig.GK2.substring(i * 2, i * 2 + 2).toInt(16)).toByte()
+        }
+        val c = Cipher.getInstance("AES/GCM/NoPadding")
+        c.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, raw, 0, 12))
+        return c.doFinal(raw, 12, raw.size - 12)
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,7 +85,16 @@ class MainActivity : ComponentActivity() {
                 override fun shouldInterceptRequest(
                     view: WebView,
                     request: WebResourceRequest
-                ): WebResourceResponse? = loader.shouldInterceptRequest(request.url)
+                ): WebResourceResponse? {
+                    if (request.url.path == "/assets/index.html") {
+                        return WebResourceResponse(
+                            "text/html", "utf-8", 200, "OK",
+                            mapOf("Cache-Control" to "no-store"),
+                            ByteArrayInputStream(gameHtml()),
+                        )
+                    }
+                    return loader.shouldInterceptRequest(request.url)
+                }
 
                 override fun onPageFinished(view: WebView, url: String?) {
                     pageReady = true

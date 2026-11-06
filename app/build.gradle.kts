@@ -1,3 +1,9 @@
+import java.security.MessageDigest
+import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,6 +28,28 @@ val liveRewardedId = "ca-app-pub-4812493783151469/4004619688"
 fun envOr(name: String, fallback: String): String =
     System.getenv(name)?.takeIf { it.isNotBlank() } ?: fallback
 
+// The game file is encrypted at build time (AES-256-GCM) and only decrypted in memory inside the app,
+// so it cannot simply be unzipped from the APK/AAB. The key comes from the upload keystore password when
+// building for release, otherwise from a fixed test value.
+val gameKey: ByteArray = MessageDigest.getInstance("SHA-256")
+    .digest(("ozmora-game:" + (System.getenv("KEYSTORE_PASSWORD") ?: "debug-only")).toByteArray())
+val keyMask: ByteArray = MessageDigest.getInstance("SHA-256").digest("ozmora-mask".toByteArray())
+fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it) }
+val gameSrc = layout.projectDirectory.file("game/index.html").asFile
+val gameOut = layout.buildDirectory.dir("generated/gameAssets")
+val encryptGame by tasks.registering {
+    inputs.file(gameSrc)
+    inputs.property("k", hex(gameKey))
+    outputs.dir(gameOut)
+    doLast {
+        val nonce = ByteArray(12).also { SecureRandom().nextBytes(it) }
+        val c = Cipher.getInstance("AES/GCM/NoPadding")
+        c.init(Cipher.ENCRYPT_MODE, SecretKeySpec(gameKey, "AES"), GCMParameterSpec(128, nonce))
+        val out = gameOut.get().asFile.apply { mkdirs() }
+        File(out, "game.bin").writeBytes(nonce + c.doFinal(gameSrc.readBytes()))
+    }
+}
+
 android {
     namespace = "com.onlyneeded.ozmora"
     compileSdk = 36
@@ -30,8 +58,8 @@ android {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 36
-        versionCode = 46
-        versionName = "4.7"
+        versionCode = 47
+        versionName = "4.8"
     }
 
     if (keystorePath != null) {
@@ -48,6 +76,9 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    sourceSets["main"].assets.srcDir(gameOut)
+    defaultConfig.buildConfigField("String", "GK1", "\"${hex(ByteArray(32) { (gameKey[it].toInt() xor keyMask[it].toInt()).toByte() })}\"")
+    defaultConfig.buildConfigField("String", "GK2", "\"${hex(keyMask)}\"")
     defaultConfig.buildConfigField("boolean", "ADS_ENABLED", if (noAds) "false" else "true")
 
     buildTypes {
@@ -61,7 +92,8 @@ android {
             manifestPlaceholders["admobAppId"] = envOr("ADMOB_APP_ID", liveAppId)
             buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"${envOr("ADMOB_INTERSTITIAL_ID", liveInterstitialId)}\"")
             buildConfigField("String", "ADMOB_REWARDED_ID", "\"${envOr("ADMOB_REWARDED_ID", liveRewardedId)}\"")
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // Without the upload keystore the release build is signed with the debug key: it installs
             // for testing with the live ad IDs, but it is not the file to upload to Google Play.
             signingConfig = if (keystorePath != null) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
@@ -85,3 +117,5 @@ dependencies {
     implementation("com.google.android.gms:play-services-ads:23.6.0")
     implementation("com.google.android.ump:user-messaging-platform:3.1.0")
 }
+
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach { dependsOn(encryptGame) }

@@ -12,7 +12,7 @@ The game is a single offline HTML file shown full-screen inside a small Android 
 
 ## Change the game
 
-The whole game lives in `app/src/main/assets/index.html`. Edit it, push to `main`, and the
+The whole game lives in `app/game/index.html`. Edit it, push to `main`, and the
 workflow builds a new APK. You can also open that file in any browser to test quickly.
 
 ## Signed release for Play Store
