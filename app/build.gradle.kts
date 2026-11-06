@@ -30,8 +30,8 @@ android {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 36
-        versionCode = 45
-        versionName = "4.6"
+        versionCode = 46
+        versionName = "4.7"
     }
 
     if (keystorePath != null) {
@@ -62,9 +62,9 @@ android {
             buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"${envOr("ADMOB_INTERSTITIAL_ID", liveInterstitialId)}\"")
             buildConfigField("String", "ADMOB_REWARDED_ID", "\"${envOr("ADMOB_REWARDED_ID", liveRewardedId)}\"")
             isMinifyEnabled = false
-            if (keystorePath != null) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // Without the upload keystore the release build is signed with the debug key: it installs
+            // for testing with the live ad IDs, but it is not the file to upload to Google Play.
+            signingConfig = if (keystorePath != null) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
 
