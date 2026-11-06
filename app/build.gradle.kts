@@ -58,7 +58,7 @@ android {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 36
-        versionCode = 48
+        versionCode = 49
         versionName = "4.8"
     }
 
@@ -118,4 +118,4 @@ dependencies {
     implementation("com.google.android.ump:user-messaging-platform:3.1.0")
 }
 
-tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach { dependsOn(encryptGame) }
+tasks.matching { it.name != "encryptGame" && (it.name.endsWith("Assets") || it.name.contains("Lint")) }.configureEach { dependsOn(encryptGame) }
