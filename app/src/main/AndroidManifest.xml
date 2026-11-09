@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+    <!-- Optional daily reminders (the player is asked first) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".OzmoraApp"
@@ -34,6 +37,11 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity android:name="com.google.android.gms.ads.AdActivity" android:process=":ads" />
         <provider android:name="com.google.android.gms.ads.MobileAdsInitProvider" android:process=":ads" tools:node="merge" />
+
+        <receiver android:name=".ReminderReceiver" android:exported="false" />
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
+        </receiver>
 
         <activity
             android:name=".MainActivity"

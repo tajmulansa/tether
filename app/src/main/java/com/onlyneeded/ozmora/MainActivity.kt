@@ -2,7 +2,13 @@ package com.onlyneeded.ozmora
 
 import android.annotation.SuppressLint
 import android.graphics.Color
+import android.Manifest
+import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
+import android.webkit.JavascriptInterface
+import androidx.activity.result.contract.ActivityResultContracts
 import java.io.ByteArrayInputStream
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
@@ -30,6 +36,49 @@ class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private lateinit var ads: AdBridge
     @Volatile private var pageReady = false
+    private var fromToggle = false
+
+    private val askNotify = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        Reminder.setEnabled(this, granted)
+        if (!granted && fromToggle) {
+            // Blocked for good: send the player to the app's notification settings.
+            runCatching {
+                startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+            }
+        }
+        fromToggle = false
+        pushRemind()
+    }
+
+    private fun pushRemind() {
+        web.evaluateJavascript("window.tetherRemind&&window.tetherRemind(${Reminder.active(this)})", null)
+    }
+
+    private fun enableReminders() {
+        Reminder.setEnabled(this, true)
+        if (!Reminder.hasPermission(this)) askNotify.launch(Manifest.permission.POST_NOTIFICATIONS) else pushRemind()
+    }
+
+    /** window.AndroidNotify: the game's Reminders switch and the one-time question after the first level. */
+    inner class NotifyBridge {
+        @JavascriptInterface fun state(): Boolean = Reminder.active(this@MainActivity)
+
+        @JavascriptInterface fun toggle() = runOnUiThread {
+            if (Reminder.active(this@MainActivity)) { Reminder.setEnabled(this@MainActivity, false); pushRemind() }
+            else { fromToggle = true; enableReminders() }
+        }
+
+        @JavascriptInterface fun ask() = runOnUiThread {
+            if (Reminder.asked(this@MainActivity) || isFinishing) return@runOnUiThread
+            Reminder.setAsked(this@MainActivity)
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle("Daily reminder?")
+                .setMessage("Get a gentle nudge when it has been a while. You can turn it off any time in Settings.")
+                .setPositiveButton("Yes, remind me") { _, _ -> enableReminders() }
+                .setNegativeButton("Not now", null)
+                .show()
+        }
+    }
 
     /** The game page is stored encrypted in the app; it is decrypted here, in memory only. */
     private fun gameHtml(): ByteArray {
@@ -114,6 +163,8 @@ class MainActivity : ComponentActivity() {
         ads = AdBridge(this, web)
         if (BuildConfig.ADS_ENABLED) web.addJavascriptInterface(ads, "AndroidAds")
 
+        web.addJavascriptInterface(NotifyBridge(), "AndroidNotify")
+
         // Keep the page renderer at high priority so the system does not throttle it while we play.
         web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
         setContentView(web)
@@ -149,6 +200,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         web.onResume()
+        Reminder.cancel(this)
         ads.pollGame()
         hideSystemBars()
     }
@@ -158,6 +210,12 @@ class MainActivity : ComponentActivity() {
         web.evaluateJavascript("window.tetherPause&&window.tetherPause()", null)
         web.onPause()
         super.onPause()
+    }
+
+    override fun onStop() {
+        // Left the game: line up the reminders (24 h later, then twice a day).
+        Reminder.schedule(this)
+        super.onStop()
     }
 
     override fun onDestroy() {

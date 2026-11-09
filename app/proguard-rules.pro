@@ -3,3 +3,6 @@
     @android.webkit.JavascriptInterface <methods>;
 }
 -keepattributes *Annotation*
+-keepclassmembers class com.onlyneeded.ozmora.MainActivity$NotifyBridge {
+    @android.webkit.JavascriptInterface <methods>;
+}
