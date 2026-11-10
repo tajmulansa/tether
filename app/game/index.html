@@ -652,8 +652,8 @@ function zoneInfo(w){
 function zoneLabel(z){return '<small>Zone '+(z.w+1)+'</small><b>'+z.n+'</b>';}
 function zoneReward(w){return 30+(w%16)*5;}                  /* shards for discovering a zone beyond the first eight */
 function mileBonus(n){return Math.min(250,40+n*2);}          /* first-clear bonus of a milestone level */
-const GEM_PCT=70,GEM_VAL=2;                                    /* share of gems for the second star; each gem is worth 2 */
-function gemPct(){return GEM_PCT;}
+const GEM_VAL=2;                                               /* each gem is worth 2 */
+function scoreNeed(D){return Math.ceil(D.L*1.5);}              /* score needed for the second star */
 function perfOf(D){return Math.ceil(D.L*.5);}                /* perfect releases needed for the third star */
 const ZONES=[
   {h:225,m:'',       amb:'star', t:'Where every orbit begins'},
@@ -1461,14 +1461,12 @@ function collect(it){
 
 function rescue(){
   const p=player;let best=null,bd=1e9;
-  for(const a of anchors){
-    if(a.haz||a.gone||a.goal||a.y>camY+H*0.9)continue;
-    const d=Math.abs(a.y-p.y)+Math.abs(a.x-p.x)*.3;
-    if(d<bd){bd=d;best=a;}
-  }
-  if(!best)for(const a of anchors){                      /* nothing in view: take the nearest safe anchor anywhere */
-    if(a.haz||a.goal)continue;
-    const d=Math.abs(a.y-p.y)+Math.abs(a.x-p.x)*.3;
+  /* a shield saves the run, it never skips the level: only the anchor the orb left, or one at the player's own progress, is allowed */
+  const lim=run.maxIdx+1;
+  if(p.prev&&!p.prev.haz&&!p.prev.goal&&p.prev.idx<=lim)best=p.prev;
+  else for(const a of anchors){
+    if(a.haz||a.goal||a.idx>lim)continue;
+    const d=Math.abs(a.idx-run.maxIdx)*1000+Math.abs(a.y-p.y)+Math.abs(a.x-p.x)*.3;
     if(d<bd){bd=d;best=a;}
   }
   if(!best)return false;
@@ -1512,8 +1510,8 @@ function levelClear(a){
   if(state!=='play')return;
   state='clear';overT=-.6;run.cleared=true;hideBanner();
   const D=run.def,lv=save.lvl,n=run.level,par=perfOf(D);
-  const need=Math.ceil(run.shardTotal*gemPct(D)/100);
-  const f=[true,run.shards>=need,!run.revived&&run.perfects>=par];
+  const need=scoreNeed(D);
+  const f=[true,run.score>=need,!run.revived&&run.perfects>=par];
   const st=f.filter(Boolean).length;
   const prevSt=lv.stars[n]||0,prevBp=lv.bp[n]||0,first=prevSt===0;
   lv.stars[n]=Math.max(prevSt,st);
@@ -1690,7 +1688,7 @@ function showClear(){
   $('clScore').textContent='0';countUp($('clScore'),run.score);
   $('clSub').textContent=c.first?'Score':(run.score>c.prevBp?'New best · was '+c.prevBp:'Best '+c.prevBp);
   const g=[[c.f[0],'Level complete'],
-    [c.f[1],run.shardTotal>0?'Collect '+c.need+' of '+run.shardTotal+' gems':'Collect the gems'],
+    [c.f[1],'Score '+c.need+' or more'],
     [c.f[2],'Land '+c.par+' perfects, no revive']];
   $('clGoals').innerHTML=g.map(function(x){return '<div class="goal'+(x[0]?' ok':'')+'">'+x[1]+'</div>';}).join('');
   $('clEarn').innerHTML='<i class="shard"></i>+'+c.earned+' gems'+(c.mb?' · milestone +'+c.mb:' earned');
@@ -1702,9 +1700,9 @@ function showClear(){
   $('clr').classList.remove('hide');overT=0;
 }
 /* separate "Revive?" window, shown before the score window; it expires after a few seconds */
-const REVIVE_TIME=7;let rvLeft=0,revOpen=false;
+const REVIVE_TIME=7,AD_WAIT=16;let rvLeft=0,rvMax=REVIVE_TIME,revOpen=false;   /* AD_WAIT: seconds an ad gets to load once the player asks for it */
 function openRev(){
-  revOpen=true;rvLeft=REVIVE_TIME;
+  revOpen=true;rvLeft=rvMax=REVIVE_TIME;
   $('rvScore').textContent=run.score;
   $('bAdRevive').innerHTML=AD_ICON+'Watch ad to revive';
   $('bAdRevive').classList.toggle('hide',!Ads.has());
@@ -1720,14 +1718,14 @@ function closeRev(){
 function tickRevive(dt){
   if(!revOpen||Ads.busy)return;
   rvLeft-=dt;
-  const f=Math.max(0,rvLeft/REVIVE_TIME);
+  const f=Math.max(0,rvLeft/rvMax);
   $('rvTimer').firstChild.style.transform='scaleX('+f+')';
   $('rvTimer').classList.toggle('low',rvLeft<2.2);
   if(rvLeft<=0){if(Ads.want)adFail();else closeRev();}
 }
 /* what each of the three stars asks for */
 function goalsHTML(){
-  const g=['Reach the final gate','Collect '+gemPct(run.def)+'% of the gems','Land '+perfOf(run.def)+' perfect releases, no revive'];
+  const g=['Reach the final gate','Score '+scoreNeed(run.def)+' or more','Land '+perfOf(run.def)+' perfect releases, no revive'];
   return g.map(function(x){return '<div class="goal">'+x+'</div>';}).join('');
 }
 function renderHome(){
@@ -1905,8 +1903,9 @@ $('bHome').onclick=function(){leaveOver(showHome);};
 $('bAdRevive').onclick=function(){
   if(Ads.want||Ads.busy||!revOpen)return;
   /* every tap restarts the timer; the ad has until it runs out */
-  rvLeft=REVIVE_TIME;$('rvTimer').classList.remove('low');$('rvTimer').firstChild.style.transform='scaleX(1)';
+  rvLeft=rvMax=REVIVE_TIME;$('rvTimer').classList.remove('low');$('rvTimer').firstChild.style.transform='scaleX(1)';
   if(!Ads.rewardedReady()){
+    rvLeft=rvMax=AD_WAIT;
     /* not loaded: ask the app to load it now; it is shown the moment it is ready */
     Ads.want=true;$('bAdRevive').innerHTML=AD_ICON+'Loading ad…';
     try{window.AndroidAds.retryRewarded&&window.AndroidAds.retryRewarded();}catch(e){}

@@ -58,8 +58,8 @@ android {
         applicationId = "com.onlyneeded.ozmora"
         minSdk = 27
         targetSdk = 36
-        versionCode = 54
-        versionName = "5.0"
+        versionCode = 55
+        versionName = "5.1"
     }
 
     if (keystorePath != null) {
