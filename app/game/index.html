@@ -1473,7 +1473,7 @@ function rescue(){
   best.gone=false;
   p.latched=best;p.r=52;p.ang=Math.PI/2;p.dir=1;p.vx=p.vy=0;p.prev=null;p.cool=0;p.flightT=0;
   p.x=best.x+Math.cos(p.ang)*p.r;p.y=best.y+Math.sin(p.ang)*p.r;
-  camY=Math.min(camY,p.y-H*0.55);trail=[];
+  camY=p.y-H*0.55;trail=[];                                 /* put the camera back on the orb, wherever it had flown to */
   run.invuln=1.4;run.combo=0;
   return true;
 }
